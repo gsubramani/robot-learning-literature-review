@@ -25,7 +25,7 @@ These three dimensions interact. Reducing memory through quantization typically 
 
 ## 2. Small-Scale: ACT and Similar
 
-**Action Chunking with Transformers (ACT)** represents the entry point for modern IL practitioners: a transformer-encoder/decoder architecture that predicts a chunk of \(k\) future actions, trained with a CVAE objective.
+**Action Chunking with Transformers (ACT)** represents the entry point for modern IL practitioners: a transformer-encoder/decoder architecture that predicts a chunk of $k$ future actions, trained with a CVAE objective.
 
 **Parameters:** ~80 million (visual encoder + transformer)
 
@@ -82,9 +82,9 @@ Octo is a transformer-based generalist robot policy pre-trained on the Open X-Em
 
 Diffusion Policy frames action prediction as a conditional denoising diffusion process:
 
-\[
+$$
 \mathbf{a}_0 = \text{DenoisingNet}\left(\mathbf{a}_T, \mathbf{o}, T\right), \quad \mathbf{a}_T \sim \mathcal{N}(0, I)
-\]
+$$
 
 Two architectural variants:
 - **CNN variant:** ~256M parameters; 1–2× A100 for 4–8 hours training
@@ -203,9 +203,9 @@ OpenVLA demonstrates a key empirical result: it outperforms RT-2-X (55B paramete
 
 **Architecture:** VLM backbone for language and vision understanding; flow matching head for action generation:
 
-\[
+$$
 \frac{d\mathbf{a}}{dt} = v_\theta(\mathbf{a}_t, t, \mathbf{o}), \quad t \in [0, 1]
-\]
+$$
 
 **Compute estimates:**
 - Pre-training: ~256× H100 GPUs, several weeks (estimated; not officially disclosed)
@@ -273,13 +273,13 @@ For smaller policies (ACT, Diffusion Policy), quantization is rarely necessary; 
 
 ### 6.2 LoRA / QLoRA Fine-tuning
 
-Low-Rank Adaptation (LoRA) inserts trainable rank-\(r\) matrices into the attention projection layers while freezing the original weights:
+Low-Rank Adaptation (LoRA) inserts trainable rank-$r$ matrices into the attention projection layers while freezing the original weights:
 
-\[
+$$
 W' = W + \Delta W = W + \frac{\alpha}{r} BA, \quad B \in \mathbb{R}^{d \times r},\ A \in \mathbb{R}^{r \times k}
-\]
+$$
 
-For a 7B model with \(r = 32\), LoRA reduces trainable parameters from 7B to ~100M — a 70× reduction in gradient memory.
+For a 7B model with $r = 32$, LoRA reduces trainable parameters from 7B to ~100M — a 70× reduction in gradient memory.
 
 **QLoRA** combines INT4 quantization of the frozen base model with LoRA adapters stored in BF16, making full-model fine-tuning feasible on a single A100 80 GB card for models up to ~13B parameters.
 
@@ -326,9 +326,9 @@ The core insight: not every input token requires all 32–40 transformer layers.
 
 Knowledge distillation trains a fast student policy to match the output distribution of a slow teacher policy:
 
-\[
+$$
 \mathcal{L}_\text{distill} = D_\text{KL}\left(p_\text{student}(\mathbf{a} | \mathbf{o}) \| p_\text{teacher}(\mathbf{a} | \mathbf{o})\right)
-\]
+$$
 
 **One-Step Diffusion Policy (OneDP):** Distills a pre-trained multi-step diffusion policy into a single-step action generator by minimizing KL divergence along the diffusion chain ([Wang et al., 2024](http://arxiv.org/abs/2410.21257)). Results:
 - Action prediction frequency improves from **1.5 Hz → 62 Hz** (41× speedup)

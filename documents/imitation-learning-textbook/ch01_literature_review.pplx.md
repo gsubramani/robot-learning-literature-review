@@ -19,33 +19,33 @@
 
 ## 1. Foundations of Imitation Learning
 
-Imitation learning (IL) — also called learning from demonstration (LfD) — is the problem of inducing a policy \(\pi : \mathcal{S} \to \mathcal{A}\) from a corpus of expert demonstrations \(\mathcal{D} = \{(s_t, a_t)\}_{t=1}^T\), without access to an explicit reward signal. The appeal over reinforcement learning is obvious: reward engineering is brittle, and human demonstrations encode rich prior knowledge about task structure. The central challenge, however, is *distribution shift* — at test time, the learner's own actions perturb the state distribution away from that seen during training, causing cascading errors.
+Imitation learning (IL) — also called learning from demonstration (LfD) — is the problem of inducing a policy $\pi : \mathcal{S} \to \mathcal{A}$ from a corpus of expert demonstrations $\mathcal{D} = \{(s_t, a_t)\}_{t=1}^T$, without access to an explicit reward signal. The appeal over reinforcement learning is obvious: reward engineering is brittle, and human demonstrations encode rich prior knowledge about task structure. The central challenge, however, is *distribution shift* — at test time, the learner's own actions perturb the state distribution away from that seen during training, causing cascading errors.
 
 ### 1.1 Behavioral Cloning
 
-Behavioral Cloning (BC) reduces imitation to supervised learning. Given a dataset \(\mathcal{D} = \{(s_i, a_i^*)\}\) of state-action pairs collected under the expert policy \(\pi^*\), a policy \(\hat{\pi}_\theta\) is trained to minimize the surrogate loss:
+Behavioral Cloning (BC) reduces imitation to supervised learning. Given a dataset $\mathcal{D} = \{(s_i, a_i^*)\}$ of state-action pairs collected under the expert policy $\pi^*$, a policy $\hat{\pi}_\theta$ is trained to minimize the surrogate loss:
 
-\[
+$$
 \mathcal{L}_{\text{BC}}(\theta) = \mathbb{E}_{(s,a^*) \sim \mathcal{D}} \left[ \ell\left(\hat{\pi}_\theta(s),\, a^*\right) \right]
-\]
+$$
 
-where \(\ell\) is mean-squared error for continuous actions or cross-entropy for discrete ones.
+where $\ell$ is mean-squared error for continuous actions or cross-entropy for discrete ones.
 
 The historical origin of BC in robotics is **ALVINN** (Autonomous Land Vehicle In a Neural Network), introduced by Pomerleau (1988). ALVINN was a fully connected network trained end-to-end from road images to steering commands, demonstrating that a neural policy could drive a vehicle by imitating human steering. With only 960 inputs (a 30×32 camera image plus a 30-element laser range-finder retina) and a single hidden layer of 29 units, ALVINN achieved sustained autonomous highway driving — a remarkable result for its era and the first demonstration of BC applied to a closed-loop robotics control problem.
 
 #### 1.1.1 The Compounding Error Problem
 
-The fundamental limitation of BC is error compounding under distribution shift. Let \(\epsilon = \mathbb{E}_{s \sim d^{\pi^*}}[\ell(s, \hat{\pi})]\) be the per-step mistake probability measured under the *expert's* state distribution \(d^{\pi^*}\). At training time, this loss is small. At test time, however, the learner executes \(\hat{\pi}\), generating a different state distribution \(d^{\hat{\pi}}\). Any deviation from expert behavior at step \(t\) shifts the state to a region not covered by \(\mathcal{D}\), increasing the probability of error at step \(t+1\), and so on.
+The fundamental limitation of BC is error compounding under distribution shift. Let $\epsilon = \mathbb{E}_{s \sim d^{\pi^*}}[\ell(s, \hat{\pi})]$ be the per-step mistake probability measured under the *expert's* state distribution $d^{\pi^*}$. At training time, this loss is small. At test time, however, the learner executes $\hat{\pi}$, generating a different state distribution $d^{\hat{\pi}}$. Any deviation from expert behavior at step $t$ shifts the state to a region not covered by $\mathcal{D}$, increasing the probability of error at step $t+1$, and so on.
 
-The formal cost of this compounding effect was established by [Ross and Bagnell (2010)](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf) via Theorem 2.1: a BC policy with per-step error \(\epsilon\) under the expert distribution incurs expected total cost bounded by
+The formal cost of this compounding effect was established by [Ross and Bagnell (2010)](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf) via Theorem 2.1: a BC policy with per-step error $\epsilon$ under the expert distribution incurs expected total cost bounded by
 
-\[
+$$
 J(\hat{\pi}) \leq J(\pi^*) + T^2 \epsilon
-\]
+$$
 
-where \(T\) is the horizon length. This \(\mathcal{O}(T^2 \epsilon)\) scaling is tight — there exist problem instances where the bound is achieved with equality — and is catastrophic for long-horizon tasks. For a 500-step manipulation task with \(\epsilon = 0.01\), the error budget is \(2500 \cdot \epsilon\), not \(5 \cdot \epsilon\).
+where $T$ is the horizon length. This $\mathcal{O}(T^2 \epsilon)$ scaling is tight — there exist problem instances where the bound is achieved with equality — and is catastrophic for long-horizon tasks. For a 500-step manipulation task with $\epsilon = 0.01$, the error budget is $2500 \cdot \epsilon$, not $5 \cdot \epsilon$.
 
-Intuitively, a single mistake at timestep \(t\) deposits the agent in an out-of-distribution state from which the BC policy (trained only on expert trajectories) has no corrective behavior, leading to further deviations. The quadratic blowup arises because each mistake can trigger \(\mathcal{O}(T)\) subsequent mistakes, and there are \(\mathcal{O}(T)\) such opportunities.
+Intuitively, a single mistake at timestep $t$ deposits the agent in an out-of-distribution state from which the BC policy (trained only on expert trajectories) has no corrective behavior, leading to further deviations. The quadratic blowup arises because each mistake can trigger $\mathcal{O}(T)$ subsequent mistakes, and there are $\mathcal{O}(T)$ such opportunities.
 
 ### 1.2 DAgger: Dataset Aggregation
 
@@ -65,27 +65,27 @@ end for
 Return best π̂ᵢ on validation
 ```
 
-The **mixture policy** at iteration \(i\) is:
+The **mixture policy** at iteration $i$ is:
 
-\[
+$$
 \pi_i = \beta_i \pi^* + (1-\beta_i)\hat{\pi}_i
-\]
+$$
 
-where \(\{\beta_i\}\) is a mixing schedule satisfying \(\beta_i \to 0\) as \(i \to \infty\) (e.g., \(\beta_i = p^{i-1}\) for \(p \in (0,1)\), or \(\beta_1 = 1, \beta_{i>1} = 0\) for the parameter-free variant). At early iterations, the expert provides most of the control, ensuring safe data collection; as \(\hat{\pi}\) matures, the learner increasingly controls the trajectory and the expert labels states near the learner's distribution.
+where $\{\beta_i\}$ is a mixing schedule satisfying $\beta_i \to 0$ as $i \to \infty$ (e.g., $\beta_i = p^{i-1}$ for $p \in (0,1)$, or $\beta_1 = 1, \beta_{i>1} = 0$ for the parameter-free variant). At early iterations, the expert provides most of the control, ensuring safe data collection; as $\hat{\pi}$ matures, the learner increasingly controls the trajectory and the expert labels states near the learner's distribution.
 
 #### 1.2.1 Theoretical Guarantee
 
-DAgger's main theoretical result (Theorem 3.2 from [Ross et al., 2011](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf)) is that after \(N = \tilde{\mathcal{O}}(T)\) iterations with dataset aggregation, there exists a policy \(\hat{\pi}\) in the sequence such that:
+DAgger's main theoretical result (Theorem 3.2 from [Ross et al., 2011](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf)) is that after $N = \tilde{\mathcal{O}}(T)$ iterations with dataset aggregation, there exists a policy $\hat{\pi}$ in the sequence such that:
 
-\[
+$$
 J(\hat{\pi}) \leq J(\pi^*) + u \cdot T \cdot \epsilon_N + \mathcal{O}(1)
-\]
+$$
 
-where \(\epsilon_N = \min_\pi \frac{1}{N}\sum_{i=1}^N \mathbb{E}_{s \sim d^{\pi_i}}[\ell(s,\pi)]\) is the average surrogate loss under the aggregated datasets, and \(u\) bounds the per-step regret of following a non-expert action (\(u = 1\) for the 0-1 loss against the expert, \(u = \mathcal{O}(T)\) in the worst case). The improvement over BC is stark: the dependence on horizon drops from \(\mathcal{O}(T^2 \epsilon)\) to \(\mathcal{O}(T \epsilon)\) — linear rather than quadratic.
+where $\epsilon_N = \min_\pi \frac{1}{N}\sum_{i=1}^N \mathbb{E}_{s \sim d^{\pi_i}}[\ell(s,\pi)]$ is the average surrogate loss under the aggregated datasets, and $u$ bounds the per-step regret of following a non-expert action ($u = 1$ for the 0-1 loss against the expert, $u = \mathcal{O}(T)$ in the worst case). The improvement over BC is stark: the dependence on horizon drops from $\mathcal{O}(T^2 \epsilon)$ to $\mathcal{O}(T \epsilon)$ — linear rather than quadratic.
 
-The intuition is that DAgger trains on a distribution that closely approximates \(d^{\hat{\pi}}\), the learner's own visitation distribution. Formally, DAgger is an instance of online learning (Follow-The-Leader) applied to the sequence of surrogate losses indexed by the evolving state distribution.
+The intuition is that DAgger trains on a distribution that closely approximates $d^{\hat{\pi}}$, the learner's own visitation distribution. Formally, DAgger is an instance of online learning (Follow-The-Leader) applied to the sequence of surrogate losses indexed by the evolving state distribution.
 
-**Practical considerations.** DAgger requires an interactive expert — at each iteration, the expert must label states visited by the current learner. This is manageable with human-in-the-loop teleoperation, where an operator observes the robot's execution and provides corrective demonstrations. For tasks where the expert is a hard-coded controller or a human, the annotation overhead is non-trivial. Many practical deployments use the \(\beta_1=1\) variant (collect expert data first, then label learner-visited states in subsequent rounds) or safe DAgger variants that guarantee the robot stays within safe regions during data collection.
+**Practical considerations.** DAgger requires an interactive expert — at each iteration, the expert must label states visited by the current learner. This is manageable with human-in-the-loop teleoperation, where an operator observes the robot's execution and provides corrective demonstrations. For tasks where the expert is a hard-coded controller or a human, the annotation overhead is non-trivial. Many practical deployments use the $\beta_1=1$ variant (collect expert data first, then label learner-visited states in subsequent rounds) or safe DAgger variants that guarantee the robot stays within safe regions during data collection.
 
 ---
 
@@ -93,13 +93,13 @@ The intuition is that DAgger trains on a distribution that closely approximates 
 
 ### 2.1 Gaussian Mixture Models for Action Prediction
 
-Early generative approaches to BC represented the policy \(\pi(a \mid s)\) as a Gaussian Mixture Model (GMM):
+Early generative approaches to BC represented the policy $\pi(a \mid s)$ as a Gaussian Mixture Model (GMM):
 
-\[
+$$
 \pi(a \mid s) = \sum_{k=1}^K \phi_k(s)\, \mathcal{N}(a \mid \mu_k(s), \Sigma_k(s))
-\]
+$$
 
-where the mixing weights \(\phi_k(s)\), means \(\mu_k(s)\), and covariances \(\Sigma_k(s)\) are all state-dependent, typically parameterized by neural networks. GMMs were attractive because they can, in principle, capture *multimodal* action distributions — a critical property when multiple distinct behaviors are consistent with a single observation (e.g., a robot facing a wall can turn left or right). In practice, GMMs with differentiable parameters can be trained by maximizing the log-likelihood of demonstrations, and mode selection at test time is performed by sampling from the mixture or taking the maximum-likelihood mode.
+where the mixing weights $\phi_k(s)$, means $\mu_k(s)$, and covariances $\Sigma_k(s)$ are all state-dependent, typically parameterized by neural networks. GMMs were attractive because they can, in principle, capture *multimodal* action distributions — a critical property when multiple distinct behaviors are consistent with a single observation (e.g., a robot facing a wall can turn left or right). In practice, GMMs with differentiable parameters can be trained by maximizing the log-likelihood of demonstrations, and mode selection at test time is performed by sampling from the mixture or taking the maximum-likelihood mode.
 
 The primary limitation is mode collapse: the EM-style training dynamics tend to concentrate probability mass on the dominant mode, suppressing minority modes. This was observed empirically in manipulation tasks where the robot would consistently choose one of two equivalent grasp strategies rather than distributing behavior across both.
 
@@ -107,29 +107,31 @@ The primary limitation is mode collapse: the EM-style training dynamics tend to 
 
 **Dynamic Movement Primitives** (DMPs), formalized by [Pastor et al. (2009)](https://doi.org/10.1109/robot.2009.5152385) and extensively surveyed by Ijspeert et al. (2013), represent motor skills as stable second-order dynamical systems perturbed by a learned forcing function. A discrete DMP for a scalar degree of freedom takes the form:
 
-\[
+$$
 \tau \dot{v} = K(g - y) - D v - K(g - y_0)\, s + K\, f(s)
-\]
-\[
+$$
+
+$$
 \tau \dot{y} = v
-\]
-\[
+$$
+
+$$
 \tau \dot{s} = -\alpha_s s
-\]
+$$
 
-where \(y\) is the trajectory, \(g\) is the goal, \(y_0\) is the starting position, \(s \in [0,1]\) is a phase variable decaying exponentially (with rate \(\alpha_s\)), \(K\) and \(D\) are spring and damping constants (typically chosen for critical damping: \(D = 2\sqrt{K}\)), and \(f(s)\) is the *forcing function* — a weighted sum of Gaussian basis functions fitted to the demonstrated trajectory.
+where $y$ is the trajectory, $g$ is the goal, $y_0$ is the starting position, $s \in [0,1]$ is a phase variable decaying exponentially (with rate $\alpha_s$), $K$ and $D$ are spring and damping constants (typically chosen for critical damping: $D = 2\sqrt{K}$), and $f(s)$ is the *forcing function* — a weighted sum of Gaussian basis functions fitted to the demonstrated trajectory.
 
-The forcing function is what gives DMPs expressiveness: it shapes the canonical spring-damper trajectory to reproduce complex observed movements. Given a demonstration \(\{y_t^*, \dot{y}_t^*, \ddot{y}_t^*\}\), the target forcing function is computed analytically:
+The forcing function is what gives DMPs expressiveness: it shapes the canonical spring-damper trajectory to reproduce complex observed movements. Given a demonstration $\{y_t^*, \dot{y}_t^*, \ddot{y}_t^*\}$, the target forcing function is computed analytically:
 
-\[
+$$
 f^*(s) = \frac{\tau \ddot{y}^* - K(g - y^*) + D\dot{y}^* + K(g - y_0)\, s}{K}
-\]
+$$
 
-and a weighted regression (e.g., locally weighted regression) fits the basis functions to \(f^*(s)\).
+and a weighted regression (e.g., locally weighted regression) fits the basis functions to $f^*(s)$.
 
 DMPs offer several practical advantages over purely data-driven approaches:
-- **Guaranteed convergence** to the goal state \(g\), even under perturbations, due to the stable attractor dynamics.
-- **Temporal and spatial scaling**: changing \(\tau\) scales execution time; changing \(g\) spatially retargets the motion.
+- **Guaranteed convergence** to the goal state $g$, even under perturbations, due to the stable attractor dynamics.
+- **Temporal and spatial scaling**: changing $\tau$ scales execution time; changing $g$ spatially retargets the motion.
 - **Compositionality**: DMPs can be sequenced and coupled via coupling terms to handle obstacle avoidance and force-torque constraints.
 
 The limitations are equally clear: DMPs are low-dimensional, task-specific representations. A separate DMP must be fitted per skill per context. They do not scale gracefully to perception-based tasks with high-dimensional observations, and they encode no semantic understanding of task structure.
@@ -138,15 +140,15 @@ The limitations are equally clear: DMPs are low-dimensional, task-specific repre
 
 [Ho and Ermon (2016)](https://arxiv.org/abs/1606.03476) reframed imitation learning as *occupancy measure matching* and derived **GAIL** (Generative Adversarial Imitation Learning) — an algorithm that recovers a policy by adversarially matching the joint state-action visitation distribution of the expert.
 
-The theoretical motivation begins with inverse reinforcement learning (IRL): imitation can be understood as finding a reward function \(r\) for which the expert is optimal, then solving the induced RL problem. Ho and Ermon showed that this two-step procedure reduces to directly minimizing a divergence between the occupancy measures \(\rho_\pi(s,a)\) and \(\rho_{\pi^*}(s,a)\). When the divergence is Jensen-Shannon, the resulting minimax objective is:
+The theoretical motivation begins with inverse reinforcement learning (IRL): imitation can be understood as finding a reward function $r$ for which the expert is optimal, then solving the induced RL problem. Ho and Ermon showed that this two-step procedure reduces to directly minimizing a divergence between the occupancy measures $\rho_\pi(s,a)$ and $\rho_{\pi^*}(s,a)$. When the divergence is Jensen-Shannon, the resulting minimax objective is:
 
-\[
+$$
 \min_\pi \max_D\; \mathbb{E}_\pi\left[\log D(s,a)\right] + \mathbb{E}_{\pi^*}\left[\log\left(1 - D(s,a)\right)\right] - \lambda H(\pi)
-\]
+$$
 
-where \(D : \mathcal{S} \times \mathcal{A} \to [0,1]\) is a discriminator that attempts to distinguish learner from expert state-action pairs, and \(H(\pi)\) is a causal entropy regularizer with coefficient \(\lambda \geq 0\). The policy \(\pi\) is simultaneously trained (via TRPO or PPO) to maximize \(\mathbb{E}_\pi[\log D(s,a)]\) — i.e., to fool the discriminator into classifying its state-action pairs as expert.
+where $D : \mathcal{S} \times \mathcal{A} \to [0,1]$ is a discriminator that attempts to distinguish learner from expert state-action pairs, and $H(\pi)$ is a causal entropy regularizer with coefficient $\lambda \geq 0$. The policy $\pi$ is simultaneously trained (via TRPO or PPO) to maximize $\mathbb{E}_\pi[\log D(s,a)]$ — i.e., to fool the discriminator into classifying its state-action pairs as expert.
 
-The connection to GANs is direct: the generator is the policy, the discriminator estimates expert-ness, and the reward for RL is \(\log D(s,a)\). This sidesteps the need to explicitly recover a reward function, which was the computationally expensive bottleneck of prior IRL approaches.
+The connection to GANs is direct: the generator is the policy, the discriminator estimates expert-ness, and the reward for RL is $\log D(s,a)$. This sidesteps the need to explicitly recover a reward function, which was the computationally expensive bottleneck of prior IRL approaches.
 
 **Practical GAIL algorithm:**
 
@@ -180,7 +182,7 @@ GAIL empirically outperforms BC and apprenticeship learning on MuJoCo locomotion
 
 ### 2.4 ProDMP and Movement Primitive Extensions
 
-**ProDMP** (Probabilistic Dynamic Movement Primitives) extended DMPs with principled uncertainty quantification using Gaussian process priors over the forcing function weights. This allowed robots to generalize across task instances (e.g., different object placements) by conditioning on contextual observations and performing Bayesian updates over trajectory parameters. ProDMP and its successor **ProMP** (Probabilistic Movement Primitives) modeled the DMP weight vector \(\mathbf{w} \sim \mathcal{N}(\boldsymbol{\mu}_w, \boldsymbol{\Sigma}_w)\) and conditioned on via-point constraints, enabling smooth interpolation across the demonstrated trajectory distribution.
+**ProDMP** (Probabilistic Dynamic Movement Primitives) extended DMPs with principled uncertainty quantification using Gaussian process priors over the forcing function weights. This allowed robots to generalize across task instances (e.g., different object placements) by conditioning on contextual observations and performing Bayesian updates over trajectory parameters. ProDMP and its successor **ProMP** (Probabilistic Movement Primitives) modeled the DMP weight vector $\mathbf{w} \sim \mathcal{N}(\boldsymbol{\mu}_w, \boldsymbol{\Sigma}_w)$ and conditioned on via-point constraints, enabling smooth interpolation across the demonstrated trajectory distribution.
 
 These methods remain relevant in structured manipulation domains where interpretable trajectory representations and compliance with geometric constraints are required.
 
@@ -196,9 +198,9 @@ The period from 2016 to 2021 was characterized by the application of deep learni
 
 The key architectural innovation was **spatial softmax**: rather than using global average pooling to aggregate convolutional features, a spatial softmax layer computes the expected 2D position of each feature map channel:
 
-\[
+$$
 c_{k,x} = \sum_{i,j} \frac{\exp(a_{ijk}/T)}{\sum_{i',j'} \exp(a_{i'j'k}/T)} \cdot x_{ij}
-\]
+$$
 
 yielding a compact set of spatial keypoints that capture task-relevant object positions while preserving the equivariance properties needed for manipulation (a gripper near an object looks similar regardless of slight viewpoint changes). The policies had 92,000 parameters and controlled 7-DoF arms at joint-torque level, learning tasks such as screwing a bottle cap and placing a coat hanger from 30–50 demonstrations.
 
@@ -206,23 +208,23 @@ This work established the visuomotor policy template that most subsequent deep I
 
 ### 3.2 Implicit Behavioral Cloning (Florence et al., 2021)
 
-[Florence, Lynch, Zeng et al. (2021)](https://arxiv.org/abs/2109.00137) — **IBC** (Implicit Behavioral Cloning) — challenged the standard BC formulation at a foundational level. Rather than training an explicit policy \(\hat{a} = F_\theta(o)\), IBC represents the policy as the argmin of a learned energy function:
+[Florence, Lynch, Zeng et al. (2021)](https://arxiv.org/abs/2109.00137) — **IBC** (Implicit Behavioral Cloning) — challenged the standard BC formulation at a foundational level. Rather than training an explicit policy $\hat{a} = F_\theta(o)$, IBC represents the policy as the argmin of a learned energy function:
 
-\[
+$$
 \hat{a} = \arg\min_{a \in \mathcal{A}}\; E_\theta(o, a)
-\]
+$$
 
-where \(E_\theta : \mathcal{O} \times \mathcal{A} \to \mathbb{R}\) is an energy-based model (EBM) trained with the InfoNCE objective:
+where $E_\theta : \mathcal{O} \times \mathcal{A} \to \mathbb{R}$ is an energy-based model (EBM) trained with the InfoNCE objective:
 
-\[
+$$
 \mathcal{L}_{\text{InfoNCE}} = -\mathbb{E}\left[\log \frac{e^{-E_\theta(o_i, a_i)}}{e^{-E_\theta(o_i, a_i)} + \sum_{j=1}^{N_{\text{neg}}} e^{-E_\theta(o_i, \tilde{a}_j)}}\right]
-\]
+$$
 
-where \(\{\tilde{a}_j\}_{j=1}^{N_\text{neg}}\) are negative (non-expert) actions sampled uniformly from the action space for contrastive training. At inference time, the optimal action is found via derivative-free optimization (stochastic Langevin sampling or gradient descent on \(E_\theta\)).
+where $\{\tilde{a}_j\}_{j=1}^{N_\text{neg}}$ are negative (non-expert) actions sampled uniformly from the action space for contrastive training. At inference time, the optimal action is found via derivative-free optimization (stochastic Langevin sampling or gradient descent on $E_\theta$).
 
-The theoretical motivation is that **explicit** models \(F_\theta\) are by construction continuous functions that take all intermediate values between training samples — they cannot represent discontinuities. For contact-rich manipulation, the optimal action as a function of state is generically *discontinuous*: approaching a block from the left vs. the right requires qualitatively different actions at a single decision boundary. Implicit models sidestep this by representing the action as the solution to an optimization problem, which can produce sharp discontinuities in the argmin as the energy landscape tilts.
+The theoretical motivation is that **explicit** models $F_\theta$ are by construction continuous functions that take all intermediate values between training samples — they cannot represent discontinuities. For contact-rich manipulation, the optimal action as a function of state is generically *discontinuous*: approaching a block from the left vs. the right requires qualitatively different actions at a single decision boundary. Implicit models sidestep this by representing the action as the solution to an optimization problem, which can produce sharp discontinuities in the argmin as the energy landscape tilts.
 
-IBC also naturally handles **multimodal distributions**: if two actions \(a_1\) and \(a_2\) are equally consistent with observation \(o\), the energy function can have two equally-deep wells at \(a_1\) and \(a_2\), whereas an explicit MSE model would predict their mean — which may be infeasible. Empirically, IBC [outperformed explicit BC by significant margins](https://arxiv.org/abs/2109.00137) on contact-rich tasks (block insertion, pushing to tight tolerances, bimanual scooping) and matched state-of-the-art offline RL methods on D4RL benchmarks without using any reward information.
+IBC also naturally handles **multimodal distributions**: if two actions $a_1$ and $a_2$ are equally consistent with observation $o$, the energy function can have two equally-deep wells at $a_1$ and $a_2$, whereas an explicit MSE model would predict their mean — which may be infeasible. Empirically, IBC [outperformed explicit BC by significant margins](https://arxiv.org/abs/2109.00137) on contact-rich tasks (block insertion, pushing to tight tolerances, bimanual scooping) and matched state-of-the-art offline RL methods on D4RL benchmarks without using any reward information.
 
 **Primary limitation.** Inference requires iterative optimization over the action space, which is 10–100× slower than a single forward pass through an explicit policy. For real-time control at 10–30 Hz, this is a practical bottleneck, partially addressed by using derivative-free optimizers (Langevin dynamics, CEM) with early stopping.
 
@@ -237,8 +239,8 @@ IBC also naturally handles **multimodal distributions**: if two actions \(a_1\) 
 [Jang, Irpan, Khansari et al. (2021/2022)](https://arxiv.org/abs/2202.05087) introduced **BC-Z** — an empirical study of how multi-task BC with language and video conditioning enables zero-shot generalization to unseen tasks. The policy architecture follows a task-conditioned encoder-decoder structure:
 
 - A ResNet-18 visual encoder processes monocular RGB images.
-- FiLM layers (Feature-wise Linear Modulation) condition the visual encoder on a task embedding \(z \in \mathbb{R}^{512}\), modulating intermediate feature maps via: \(\text{FiLM}(x; z) = \gamma(z) \odot x + \beta(z)\)
-- The task embedding \(z\) is produced either from a frozen language model applied to text instructions, or from a video encoder applied to human demonstration videos.
+- FiLM layers (Feature-wise Linear Modulation) condition the visual encoder on a task embedding $z \in \mathbb{R}^{512}$, modulating intermediate feature maps via: $\text{FiLM}(x; z) = \gamma(z) \odot x + \beta(z)$
+- The task embedding $z$ is produced either from a frozen language model applied to text instructions, or from a video encoder applied to human demonstration videos.
 
 Trained on 100 diverse manipulation tasks (25,877 episodes) collected via shared-autonomy teleoperation, BC-Z achieved 44% average success on 24 previously unseen tasks conditioned on language — demonstrating for the first time at scale that BC with diverse multi-task data and semantic conditioning could generalize zero-shot to novel task descriptions. The key finding was that *task diversity* matters more than data quantity: training on more varied tasks, even with fewer demonstrations per task, produced better zero-shot generalization than training deeply on a small task set.
 
@@ -246,21 +248,21 @@ Trained on 100 diverse manipulation tasks (25,877 episodes) collected via shared
 
 [Shafiullah, Cui, Altanzaya, and Pinto (2022)](https://proceedings.neurips.cc/paper_files/paper/2022/file/90d17e882adbdda42349db6f50123817-Paper-Conference.pdf) proposed **BeT** (Behavior Transformers), addressing the multimodal action distribution problem through a two-stage discretization-plus-refinement architecture built on a transformer backbone.
 
-**Core insight.** A transformer trained directly on continuous actions with MSE loss implicitly averages across modes, producing blurry behavior. By first discretizing action space into \(k\) bins (learned via k-means clustering on the demonstration dataset) and then predicting a continuous offset within the selected bin, BeT separates mode selection (a classification problem, where softmax is well-behaved under multimodality) from fine-grained precision (a regression problem within a narrow region).
+**Core insight.** A transformer trained directly on continuous actions with MSE loss implicitly averages across modes, producing blurry behavior. By first discretizing action space into $k$ bins (learned via k-means clustering on the demonstration dataset) and then predicting a continuous offset within the selected bin, BeT separates mode selection (a classification problem, where softmax is well-behaved under multimodality) from fine-grained precision (a regression problem within a narrow region).
 
 **Architecture:**
 
-1. **K-means discretization.** Run k-means on the demonstration action dataset \(\{a_i\}\) to obtain \(k\) cluster centroids \(\{A_j\}_{j=1}^k\). Each demonstration action \(a\) is assigned:
-   - A bin index: \(b_a = \arg\min_j \|a - A_j\|^2\)
-   - A continuous offset: \(h_a = a - A_{b_a}\)
+1. **K-means discretization.** Run k-means on the demonstration action dataset $\{a_i\}$ to obtain $k$ cluster centroids $\{A_j\}_{j=1}^k$. Each demonstration action $a$ is assigned:
+   - A bin index: $b_a = \arg\min_j \|a - A_j\|^2$
+   - A continuous offset: $h_a = a - A_{b_a}$
 
-2. **MinGPT backbone.** A decoder-only transformer processes a history of \(h\) observations \((o_{t-h+1}, \ldots, o_t)\) and produces per-timestep outputs.
+2. **MinGPT backbone.** A decoder-only transformer processes a history of $h$ observations $(o_{t-h+1}, \ldots, o_t)$ and produces per-timestep outputs.
 
 3. **Dual prediction heads.** Two heads operate on each position's embedding:
-   - A **binning head** (linear + softmax) outputs bin probabilities \(\hat{p} \in \Delta^k\), trained with focal loss: \(\mathcal{L}_{\text{focal}} = -(1-\hat{p}_{b_a})^\gamma \log \hat{p}_{b_a}\)
-   - An **offset head** (linear) outputs a \(k \times \dim(\mathcal{A})\) matrix of per-bin offsets \(\{\hat{h}^{(j)}\}_{j=1}^k\), trained with masked MSE: \(\mathcal{L}_{\text{offset}} = \sum_{j=1}^k \mathbf{1}[b_a = j] \cdot \|h_a - \hat{h}^{(j)}\|^2\)
+   - A **binning head** (linear + softmax) outputs bin probabilities $\hat{p} \in \Delta^k$, trained with focal loss: $\mathcal{L}_{\text{focal}} = -(1-\hat{p}_{b_a})^\gamma \log \hat{p}_{b_a}$
+   - An **offset head** (linear) outputs a $k \times \dim(\mathcal{A})$ matrix of per-bin offsets $\{\hat{h}^{(j)}\}_{j=1}^k$, trained with masked MSE: $\mathcal{L}_{\text{offset}} = \sum_{j=1}^k \mathbf{1}[b_a = j] \cdot \|h_a - \hat{h}^{(j)}\|^2$
 
-4. **Test-time action.** Sample bin \(j \sim \hat{p}\), reconstruct \(\hat{a} = A_j + \hat{h}^{(j)}\).
+4. **Test-time action.** Sample bin $j \sim \hat{p}$, reconstruct $\hat{a} = A_j + \hat{h}^{(j)}$.
 
 ```python
 # PyTorch pseudocode: BeT forward pass
@@ -317,20 +319,24 @@ BeT significantly outperforms BC, IBC, and GMM-based methods on multimodal bench
 1. **Visual encoding.** Each frame is processed by a pretrained **EfficientNet-B3** backbone, yielding a 9×9×512 spatial feature map per frame.
 
 2. **Early language fusion via FiLM.** Feature-wise Linear Modulation (FiLM) layers inject the task instruction (embedded via Universal Sentence Encoder into a 512-D vector) into the EfficientNet feature extraction. Specifically, within each MBConv block of EfficientNet, FiLM applies an affine transformation:
-   \[
+
+   $$
    \text{FiLM}(\mathbf{f}; \mathbf{z}) = \boldsymbol{\gamma}(\mathbf{z}) \odot \mathbf{f} + \boldsymbol{\beta}(\mathbf{z})
-   \]
-   where \(\boldsymbol{\gamma}, \boldsymbol{\beta} : \mathbb{R}^{512} \to \mathbb{R}^C\) are learned linear projections of the language embedding. Initializing FiLM parameters to the identity transformation allows stable training from a pretrained EfficientNet checkpoint.
+   $$
+
+   where $\boldsymbol{\gamma}, \boldsymbol{\beta} : \mathbb{R}^{512} \to \mathbb{R}^C$ are learned linear projections of the language embedding. Initializing FiLM parameters to the identity transformation allows stable training from a pretrained EfficientNet checkpoint.
 
 3. **Token compression via TokenLearner.** The 81 spatial tokens per frame (9×9 flattened) are compressed by **TokenLearner** to 8 learned summary tokens per frame via element-wise attention:
-   \[
+
+   $$
    \mathbf{z}_i = A_i(\mathbf{X}) = \text{sigmoid}(\mathbf{W}_i \mathbf{X}) \cdot \mathbf{X}
-   \]
+   $$
+
    aggregating features spatially. Across 6 frames this yields 48 tokens total, enabling transformer computation at interactive rates (3 Hz inference, ~15 ms per step on hardware).
 
 4. **Transformer decoder.** An 8-layer causal transformer with masked self-attention over the 48 vision-language tokens produces action token predictions autoregressively.
 
-5. **Action tokenization.** The 11-dimensional action vector (7 arm DoFs: \(x, y, z\), roll, pitch, yaw, gripper; 3 base DoFs: \(x, y\), yaw; 1 mode variable) is discretized: each continuous dimension is quantized into 256 uniform bins. The mode variable is 3-way categorical (arm control / base control / terminate). The transformer is trained with categorical cross-entropy on the bin indices.
+5. **Action tokenization.** The 11-dimensional action vector (7 arm DoFs: $x, y, z$, roll, pitch, yaw, gripper; 3 base DoFs: $x, y$, yaw; 1 mode variable) is discretized: each continuous dimension is quantized into 256 uniform bins. The mode variable is 3-way categorical (arm control / base control / terminate). The transformer is trained with categorical cross-entropy on the bin indices.
 
 **Training and data.** RT-1 was trained on [130k real-world demonstration episodes covering 700+ manipulation tasks](https://research.google/blog/rt-1-robotics-transformer-for-real-world-control-at-scale/), collected by a fleet of 13 robots over 17 months in office kitchen environments. The model has 35M parameters.
 
@@ -340,23 +346,23 @@ BeT significantly outperforms BC, IBC, and GMM-based methods on multimodal bench
 
 [Zhao, Kumar, Levine, and Finn (2023)](https://arxiv.org/abs/2304.13705) proposed **ACT** (Action Chunking with Transformers), targeting high-precision bimanual manipulation. ACT introduces two key ideas — action chunking and CVAE-based training — that together address the compounding error and non-stationarity challenges in fine manipulation.
 
-**Action Chunking.** Rather than predicting a single action \(a_t\) at each timestep, ACT predicts a *chunk* of \(k\) consecutive actions \((a_t, a_{t+1}, \ldots, a_{t+k-1})\) conditioned on the current observation. This chunk is then executed open-loop for \(k\) steps before re-planning. The benefits are twofold: (1) it reduces the effective horizon by a factor of \(k\), ameliorating error compounding; (2) it allows the policy to model temporal correlations across the chunk, producing smooth, coordinated multi-step behaviors that are difficult to learn step-by-step.
+**Action Chunking.** Rather than predicting a single action $a_t$ at each timestep, ACT predicts a *chunk* of $k$ consecutive actions $(a_t, a_{t+1}, \ldots, a_{t+k-1})$ conditioned on the current observation. This chunk is then executed open-loop for $k$ steps before re-planning. The benefits are twofold: (1) it reduces the effective horizon by a factor of $k$, ameliorating error compounding; (2) it allows the policy to model temporal correlations across the chunk, producing smooth, coordinated multi-step behaviors that are difficult to learn step-by-step.
 
 **CVAE Architecture.** ACT is a Conditional Variational Autoencoder (CVAE) where:
 
-- **Encoder** (used only at training time): A transformer encoder processes the *target action chunk* \((a_t, \ldots, a_{t+k-1})\) together with the current joint positions, producing a style variable \(z \sim q_\phi(z \mid a_{t:t+k}, s_t) = \mathcal{N}(\mu_\phi, \sigma_\phi)\) via the reparameterization trick.
+- **Encoder** (used only at training time): A transformer encoder processes the *target action chunk* $(a_t, \ldots, a_{t+k-1})$ together with the current joint positions, producing a style variable $z \sim q_\phi(z \mid a_{t:t+k}, s_t) = \mathcal{N}(\mu_\phi, \sigma_\phi)$ via the reparameterization trick.
 
-- **Decoder** (used at train and test time): A transformer decoder processes the current observation (images from multiple cameras, proprioceptive joint states) and the style variable \(z\) to predict the action chunk \(\hat{a}_{t:t+k}\).
+- **Decoder** (used at train and test time): A transformer decoder processes the current observation (images from multiple cameras, proprioceptive joint states) and the style variable $z$ to predict the action chunk $\hat{a}_{t:t+k}$.
 
 The training objective is the CVAE ELBO:
 
-\[
+$$
 \mathcal{L}_{\text{ACT}} = \mathbb{E}_{q_\phi}\left[\sum_{i=0}^{k-1}\|\hat{a}_{t+i} - a_{t+i}\|^2\right] + \beta \cdot D_{\text{KL}}\left(q_\phi(z \mid a_{t:t+k}, s_t) \;\|\; p(z)\right)
-\]
+$$
 
-where \(p(z) = \mathcal{N}(0, I)\) is the prior, and \(\beta\) balances reconstruction fidelity against posterior regularization.
+where $p(z) = \mathcal{N}(0, I)$ is the prior, and $\beta$ balances reconstruction fidelity against posterior regularization.
 
-At inference time, the encoder is discarded and \(z\) is sampled from the prior \(p(z)\), encouraging the decoder to produce diverse yet plausible action chunks conditioned solely on observation.
+At inference time, the encoder is discarded and $z$ is sampled from the prior $p(z)$, encouraging the decoder to produce diverse yet plausible action chunks conditioned solely on observation.
 
 ```python
 # PyTorch pseudocode: ACT inference
@@ -410,11 +416,13 @@ class ACT(nn.Module):
         return self.decode(obs_tokens, z)
 ```
 
-**Temporal ensembling.** To avoid discontinuities at chunk boundaries, ACT uses temporal ensembling: at each timestep \(t\), multiple overlapping chunk predictions \(\hat{a}_{t:t+k}^{(m)}\) are averaged with exponential weights:
-\[
+**Temporal ensembling.** To avoid discontinuities at chunk boundaries, ACT uses temporal ensembling: at each timestep $t$, multiple overlapping chunk predictions $\hat{a}_{t:t+k}^{(m)}$ are averaged with exponential weights:
+
+$$
 \bar{a}_t = \frac{\sum_{m} w_m \hat{a}_t^{(m)}}{\sum_m w_m}, \quad w_m = e^{-m \cdot \lambda}
-\]
-where \(m\) indexes how many steps ago chunk prediction \(m\) was made, and \(\lambda\) controls the recency bias.
+$$
+
+where $m$ indexes how many steps ago chunk prediction $m$ was made, and $\lambda$ controls the recency bias.
 
 Trained on only 50 demonstrations per task (approximately 10 minutes of data), ACT achieves 80–90% success on 6 difficult bimanual tasks (battery insertion, threading cable ties, opening condiment cups) that require sub-millimeter precision — tasks where BC with the same architecture failed entirely.
 
@@ -423,23 +431,24 @@ Trained on only 50 demonstrations per task (approximately 10 minutes of data), A
 [Chi, Xu, Feng et al. (2023)](https://arxiv.org/abs/2303.04137) introduced **Diffusion Policy**, representing the robot's visuomotor policy as a conditional denoising diffusion probabilistic model (DDPM) over actions. The generative model formulation inherits the key properties of diffusion models — multimodality, stable training, and high-quality sample generation — while conditioning on robot observations.
 
 **Formulation.** Define the forward (noising) process as:
-\[
+
+$$
 q(x_k \mid x_0) = \mathcal{N}(x_k; \sqrt{\bar{\alpha}_k}\, x_0,\; (1 - \bar{\alpha}_k) I)
-\]
+$$
 
-where \(x_0\) is the ground-truth action sequence, \(k \in \{0, 1, \ldots, K\}\) is the diffusion step, and \(\{\bar{\alpha}_k\}\) is the noise schedule (cosine schedule from Nichol and Dhariwal, 2021). The denoising network \(\epsilon_\theta(x_k, k, o)\) is trained to predict the noise:
+where $x_0$ is the ground-truth action sequence, $k \in \{0, 1, \ldots, K\}$ is the diffusion step, and $\{\bar{\alpha}_k\}$ is the noise schedule (cosine schedule from Nichol and Dhariwal, 2021). The denoising network $\epsilon_\theta(x_k, k, o)$ is trained to predict the noise:
 
-\[
+$$
 \mathcal{L}_{\text{DDPM}} = \mathbb{E}_{x_0, k, \epsilon, o} \left[\| \epsilon - \epsilon_\theta(\sqrt{\bar{\alpha}_k}\, x_0 + \sqrt{1-\bar{\alpha}_k}\, \epsilon,\; k,\; o)\|^2\right]
-\]
+$$
 
-where \(o\) is the observation context (camera images, proprioception). At inference time, actions are sampled by starting from Gaussian noise and iteratively denoising via the **DDPM reverse process**:
+where $o$ is the observation context (camera images, proprioception). At inference time, actions are sampled by starting from Gaussian noise and iteratively denoising via the **DDPM reverse process**:
 
-\[
+$$
 x_{k-1} = \frac{1}{\sqrt{\alpha_k}}\!\left(x_k - \frac{1-\alpha_k}{\sqrt{1-\bar{\alpha}_k}}\,\epsilon_\theta(x_k, k, o)\right) + \sigma_k\, z
-\]
+$$
 
-where \(z \sim \mathcal{N}(0, I)\), \(\alpha_k = \bar{\alpha}_k / \bar{\alpha}_{k-1}\), and \(\sigma_k = \sqrt{(1-\alpha_k)(1-\bar{\alpha}_{k-1})/(1-\bar{\alpha}_k)}\). For faster inference, **DDIM** (denoising diffusion implicit models) removes the stochastic term, enabling deterministic sampling with 10–20 denoising steps vs. the standard 100.
+where $z \sim \mathcal{N}(0, I)$, $\alpha_k = \bar{\alpha}_k / \bar{\alpha}_{k-1}$, and $\sigma_k = \sqrt{(1-\alpha_k)(1-\bar{\alpha}_{k-1})/(1-\bar{\alpha}_k)}$. For faster inference, **DDIM** (denoising diffusion implicit models) removes the stochastic term, enabling deterministic sampling with 10–20 denoising steps vs. the standard 100.
 
 **Two backbone variants:**
 
@@ -447,7 +456,7 @@ where \(z \sim \mathcal{N}(0, I)\), \(\alpha_k = \bar{\alpha}_k / \bar{\alpha}_{
 
 2. **Transformer-based (DP-T).** A transformer decoder — dubbed the "time-series diffusion transformer" — treats the action sequence as a sequence of tokens and attends over both the temporal action dimension and the observation context. Better performance on complex, long-horizon tasks.
 
-Both variants use **receding horizon control**: actions are predicted as a chunk of \(T_a = 16\) steps, but only the first \(T_e = 8\) are executed before re-planning, balancing consistency with responsiveness.
+Both variants use **receding horizon control**: actions are predicted as a chunk of $T_a = 16$ steps, but only the first $T_e = 8$ are executed before re-planning, balancing consistency with responsiveness.
 
 ```python
 # PyTorch pseudocode: Diffusion Policy (CNN variant) training step
@@ -494,7 +503,7 @@ class DiffusionPolicy(nn.Module):
         return x  # (B, T_a, act_dim)
 ```
 
-Across [12 tasks from 4 manipulation benchmarks](https://arxiv.org/abs/2303.04137), Diffusion Policy achieves an average **46.9% improvement** over existing state-of-the-art methods. Its principal advantages over prior approaches: (1) it handles arbitrarily multimodal action distributions without mode collapse; (2) it is suitable for high-dimensional action spaces (\(\dim(\mathcal{A}) \gg 1\)); and (3) it exhibits stable training dynamics compared to GMMs and VAEs, which are prone to posterior collapse.
+Across [12 tasks from 4 manipulation benchmarks](https://arxiv.org/abs/2303.04137), Diffusion Policy achieves an average **46.9% improvement** over existing state-of-the-art methods. Its principal advantages over prior approaches: (1) it handles arbitrarily multimodal action distributions without mode collapse; (2) it is suitable for high-dimensional action spaces ($\dim(\mathcal{A}) \gg 1$); and (3) it exhibits stable training dynamics compared to GMMs and VAEs, which are prone to posterior collapse.
 
 ---
 
@@ -543,8 +552,8 @@ The companion **RT-X** model trained on OXE exhibits *positive transfer*: a sing
 
 **Architecture.** Octo is a modular transformer-based diffusion policy:
 
-1. **Input tokenizers** convert heterogeneous inputs to tokens: language instructions \(\to T_l\); goal images \(\to T_g\); observation history \(\to T_o\).
-2. **Transformer backbone** processes all tokens to produce embeddings: \((e_l, e_g, e_o) = \mathcal{T}(T_l, T_g, T_o)\).
+1. **Input tokenizers** convert heterogeneous inputs to tokens: language instructions $\to T_l$; goal images $\to T_g$; observation history $\to T_o$.
+2. **Transformer backbone** processes all tokens to produce embeddings: $(e_l, e_g, e_o) = \mathcal{T}(T_l, T_g, T_o)$.
 3. **Diffusion action head** operates on readout token embeddings to predict actions via the DDPM objective (following [Diffusion Policy](https://arxiv.org/abs/2303.04137)).
 
 The modularity is the key engineering contribution: since the transformer backbone is agnostic to input modality and action space, new sensors, robots, or action representations can be incorporated during fine-tuning by adding lightweight adapter modules without touching the pretrained backbone weights.
@@ -563,7 +572,7 @@ Actions are represented identically to RT-2: continuous values quantized and ser
 
 **Results.** On [a 29-task benchmark spanning multiple robot embodiments](https://arxiv.org/abs/2406.09246), OpenVLA outperforms RT-2-X (55B) by **16.5% absolute success rate** with **7× fewer parameters**. OpenVLA also outperforms Diffusion Policy (a strong manipulation baseline) by 20.4% on multi-task fine-tuning benchmarks. The parameter efficiency is enabled by the Llama 2 backbone's strong pretraining and the dual visual encoder's richer feature representation.
 
-**Efficient fine-tuning.** OpenVLA supports **LoRA** (Low-Rank Adaptation) fine-tuning, enabling adaptation to new tasks on a consumer GPU (single RTX 4090) in hours. LoRA inserts rank-\(r\) update matrices \(\Delta W = BA\) (with \(B \in \mathbb{R}^{d \times r}\), \(A \in \mathbb{R}^{r \times k}\), \(r \ll \min(d,k)\)) alongside frozen pretrained weights, reducing trainable parameters from 7B to ~50M for typical fine-tuning runs without degrading downstream task performance.
+**Efficient fine-tuning.** OpenVLA supports **LoRA** (Low-Rank Adaptation) fine-tuning, enabling adaptation to new tasks on a consumer GPU (single RTX 4090) in hours. LoRA inserts rank-$r$ update matrices $\Delta W = BA$ (with $B \in \mathbb{R}^{d \times r}$, $A \in \mathbb{R}^{r \times k}$, $r \ll \min(d,k)$) alongside frozen pretrained weights, reducing trainable parameters from 7B to ~50M for typical fine-tuning runs without degrading downstream task performance.
 
 ```python
 # PyTorch pseudocode: OpenVLA inference
@@ -608,25 +617,25 @@ class OpenVLA(nn.Module):
 
 [Black, Brown, Driess et al. (2024)](https://arxiv.org/abs/2410.24164) from Physical Intelligence introduced **π₀**, which combines a pretrained VLM backbone with a **flow matching** action head — an alternative to diffusion that is both theoretically cleaner and empirically faster to sample from.
 
-**Flow matching.** Where diffusion defines a forward process via SDEs and a reverse process via score matching, flow matching defines a deterministic ODE trajectory connecting a noise distribution to the data distribution. The vector field \(v_\theta(x_t, t)\) is trained to satisfy:
+**Flow matching.** Where diffusion defines a forward process via SDEs and a reverse process via score matching, flow matching defines a deterministic ODE trajectory connecting a noise distribution to the data distribution. The vector field $v_\theta(x_t, t)$ is trained to satisfy:
 
-\[
+$$
 v_\theta(x_t, t) = x_1 - x_0
-\]
+$$
 
-where \(x_0 \sim \mathcal{N}(0, I)\) is noise, \(x_1\) is the target action, and \(x_t = (1-t)\,x_0 + t\,x_1\) is the linear interpolation (Conditional Flow Matching with optimal transport paths). The training loss is:
+where $x_0 \sim \mathcal{N}(0, I)$ is noise, $x_1$ is the target action, and $x_t = (1-t)\,x_0 + t\,x_1$ is the linear interpolation (Conditional Flow Matching with optimal transport paths). The training loss is:
 
-\[
+$$
 \mathcal{L}_{\text{FM}} = \mathbb{E}_{t, x_0, x_1, o}\left[\|v_\theta(x_t, t, o) - (x_1 - x_0)\|^2\right]
-\]
+$$
 
 At inference, actions are generated by solving the ODE:
 
-\[
+$$
 \frac{dx}{dt} = v_\theta(x_t, t, o), \quad x_0 \sim \mathcal{N}(0, I)
-\]
+$$
 
-via simple Euler integration over \(T_{\text{steps}} = 10\) steps — significantly fewer than DDPM (100 steps) while maintaining action quality. The conditional flow matching formulation avoids the score matching instabilities that can arise in diffusion models at low noise levels.
+via simple Euler integration over $T_{\text{steps}} = 10$ steps — significantly fewer than DDPM (100 steps) while maintaining action quality. The conditional flow matching formulation avoids the score matching instabilities that can arise in diffusion models at low noise levels.
 
 **Architecture.** π₀ grafts the flow matching head onto a pretrained VLM (a PaliGemma-3B class model). The VLM processes language instructions and multi-camera observations, producing a context embedding that conditions the flow matching denoiser. Crucially, the VLM backbone is not replaced or heavily modified — its weights are largely preserved from internet pretraining, allowing semantic grounding of language instructions.
 
@@ -708,16 +717,16 @@ Several fundamental challenges remain unsolved:
 | Method | Year | Key Idea | Action Representation | Data Scale | Benchmark / Notable Result |
 |--------|------|----------|----------------------|------------|---------------------------|
 | ALVINN | 1988 | First BC on visuomotor control | Continuous steering (1D) | ~1.5 hrs driving | Autonomous highway driving |
-| DAgger | 2011 | Dataset aggregation, iterative expert querying | Discrete / continuous | Synthetic / locomotion | \(\mathcal{O}(T\epsilon)\) loss bound vs. \(\mathcal{O}(T^2\epsilon)\) for BC |
+| DAgger | 2011 | Dataset aggregation, iterative expert querying | Discrete / continuous | Synthetic / locomotion | $\mathcal{O}(T\epsilon)$ loss bound vs. $\mathcal{O}(T^2\epsilon)$ for BC |
 | DMP | 2009 | Stable dynamical system + learned forcing function | Continuous trajectory via ODE | Per-task kinesthetic demos | Guaranteed convergence, spatial/temporal scaling |
 | GAIL | 2016 | Adversarial occupancy measure matching | Continuous | MuJoCo locomotion demos | Outperforms BC/ApprenticeshipRL on MuJoCo by large margin |
 | GPS / Visuomotor | 2016 | Guided policy search, end-to-end from pixels to torques | Continuous joint torques | 30–50 demos per task | PR2 screwing, hanging tasks from raw images |
-| IBC | 2021 | Energy-based implicit policy; argmin inference | Continuous via argmin \(E_\theta\) | 2,000 scripted demos | SOTA on contact-rich tasks; competitive with offline RL (D4RL) |
+| IBC | 2021 | Energy-based implicit policy; argmin inference | Continuous via argmin $E_\theta$ | 2,000 scripted demos | SOTA on contact-rich tasks; competitive with offline RL (D4RL) |
 | BC-Z | 2022 | Language/video-conditioned BC at scale; zero-shot generalization | Continuous delta EE | 25,877 episodes, 100 tasks | 44% zero-shot on 24 unseen tasks |
 | GATO | 2022 | Single transformer across 604 tasks and embodiments | Tokenized (1024 bins) | 604 multi-modal tasks | First multi-embodiment generalist; below specialist on each task |
 | BeT | 2022 | k-means binning + offset regression; transformer backbone | Discrete bins + continuous offset | 200–1000 demos per env | Kitchen: 0.44 (4 tasks) vs. IBC 0.24; Block push: 0.96 vs. IBC 0.04 |
 | RT-1 | 2022 | FiLM-EfficientNet + TokenLearner + Transformer; 130k demos | Discrete (256 bins per dim) | 130k episodes, 700+ tasks | 97% seen tasks, 76% novel tasks; 25% above BC-Z |
-| ACT | 2023 | CVAE + action chunking + temporal ensembling | Continuous chunk (\(k\approx 100\) steps) | 50 demos / task | 80–90% on 6 precision bimanual tasks from 10 min data |
+| ACT | 2023 | CVAE + action chunking + temporal ensembling | Continuous chunk ($k\approx 100$ steps) | 50 demos / task | 80–90% on 6 precision bimanual tasks from 10 min data |
 | Diffusion Policy | 2023 | DDPM/DDIM conditional on observation; CNN and Transformer variants | Continuous action chunk via diffusion | 200–1,000 demos | +46.9% avg over SOTA across 12 tasks on 4 benchmarks |
 | RT-2 | 2023 | Co-fine-tune 55B VLM on robot data; actions as text tokens | Text tokens (quantized int strings) | 130k robot + web-scale | ~2× generalization of RT-1 on novel tasks; emergent CoT reasoning |
 | OXE / RT-X | 2023 | Cross-embodiment dataset; 22 robots, 21 institutions | Standardized delta EE | 160k+ tasks, 22 robots | Positive transfer: RT-X > per-robot specialists |

@@ -17,7 +17,7 @@ The scarcity problem compounds across three axes:
 | Axis | Vision/NLP | Robotics |
 |------|-----------|---------|
 | **Data source** | Passive web crawl | Active human teleoperation |
-| **Marginal cost per sample** | ~$0 | $1–$10 per episode |
+| **Marginal cost per sample** | ~\$0 | \$1–\$10 per episode |
 | **Embodiment portability** | Universal (pixels/text) | Hardware-specific (joint angles, EEF poses) |
 | **Label density** | Self-supervised (next token) | 50 Hz action labels required |
 
@@ -25,11 +25,11 @@ The scarcity problem compounds across three axes:
 
 A single ALOHA-style demonstration episode at 50 Hz is a sequence of tuples:
 
-\[
+$$
 \tau = \bigl\{(o_t,\, a_t)\bigr\}_{t=0}^{T}
-\]
+$$
 
-where each observation \(o_t\) and action \(a_t\) contains:
+where each observation $o_t$ and action $a_t$ contains:
 
 - **Images:** 4 cameras × 3 channels × 480 × 640 pixels → 3,686,400 uint8 values per timestep
 - **Joint positions:** 14-DoF (7 joints per arm) → 14 float32 values  
@@ -60,7 +60,7 @@ Teleoperation — a human controlling a robot in real time — is the dominant s
 
 ### 3.2.1 ALOHA: A Low-Cost Open-Source Hardware System
 
-[ALOHA (A Low-cost Open-source Hardware System for Bimanual Teleoperation)](https://arxiv.org/abs/2304.13705) is the most widely adopted open-source teleoperation platform for IL research as of 2024. Its design philosophy is to democratize robot learning by keeping total system cost under $20,000 — one to two orders of magnitude cheaper than dexterous hand systems.
+[ALOHA (A Low-cost Open-source Hardware System for Bimanual Teleoperation)](https://arxiv.org/abs/2304.13705) is the most widely adopted open-source teleoperation platform for IL research as of 2024. Its design philosophy is to democratize robot learning by keeping total system cost under \$20,000 — one to two orders of magnitude cheaper than dexterous hand systems.
 
 #### Hardware Architecture
 
@@ -113,19 +113,19 @@ A subtle but important design choice: **the recorded actions are the leader join
 
 | Component | Cost |
 |-----------|------|
-| 2× ViperX 300 follower arms | ~$10,000 |
-| 2× WidowX 250 leader arms | ~$6,000 |
-| Cameras, mounts, compute | ~$4,000 |
-| **Total** | **~$20,000** |
+| 2× ViperX 300 follower arms | ~\$10,000 |
+| 2× WidowX 250 leader arms | ~\$6,000 |
+| Cameras, mounts, compute | ~\$4,000 |
+| **Total** | **~\$20,000** |
 
-This contrasts sharply with Shadow Robot Hand setups (>$100,000 per hand) or purpose-built bimanual systems (>$500,000).
+This contrasts sharply with Shadow Robot Hand setups (>\$100,000 per hand) or purpose-built bimanual systems (>\$500,000).
 
 ### 3.2.2 Other Teleoperation Approaches
 
 The teleoperation design space spans a wide range of cost, dexterity, and operator burden:
 
 **Shadow Robot Teleoperation System**  
-The Shadow Dexterous Hand has 24 joints per hand and uses tendons driven by pneumatic muscles, achieving near-human dexterity. Teleoperation uses a CyberGlove or exoskeleton to capture the operator's hand configuration. At $100,000+ per hand, this system targets research on dexterous manipulation where ALOHA-style parallel-jaw grippers are insufficient. The dataset volume is correspondingly small due to cost and operator fatigue.
+The Shadow Dexterous Hand has 24 joints per hand and uses tendons driven by pneumatic muscles, achieving near-human dexterity. Teleoperation uses a CyberGlove or exoskeleton to capture the operator's hand configuration. At \$100,000+ per hand, this system targets research on dexterous manipulation where ALOHA-style parallel-jaw grippers are insufficient. The dataset volume is correspondingly small due to cost and operator fatigue.
 
 **DexPilot (Handa et al., 2020)**  
 DexPilot uses a commodity depth camera to track the operator's hand pose in real time, retargeting the resulting keypoints to a multi-fingered robot hand via inverse kinematics. This eliminates wearable hardware entirely. The accuracy is lower than exoskeleton-based methods but the setup cost is dramatically reduced. Operators can collect data without calibration per session, enabling faster iteration.
@@ -144,13 +144,13 @@ HoloDex combines an Oculus Quest hand tracking (no controllers, bare hand) with 
 Not all demonstrations are equally useful for learning. Several factors determine whether a dataset will yield a high-performing policy:
 
 **Non-Stationarity of Human Demonstrations**  
-Human operators do not execute the same motion twice. Given 50 demonstrations of the same task, you will observe at least 10–20 qualitatively distinct strategies (approach angle, grasp point, trajectory shape). This multimodality is a fundamental challenge for behavior cloning with MSE regression losses, which average over modes and produce blend trajectories that fail at all of them. ACT's CVAE architecture specifically addresses this by sampling a latent style variable \(z\) that conditions the policy on a particular demonstration mode:
+Human operators do not execute the same motion twice. Given 50 demonstrations of the same task, you will observe at least 10–20 qualitatively distinct strategies (approach angle, grasp point, trajectory shape). This multimodality is a fundamental challenge for behavior cloning with MSE regression losses, which average over modes and produce blend trajectories that fail at all of them. ACT's CVAE architecture specifically addresses this by sampling a latent style variable $z$ that conditions the policy on a particular demonstration mode:
 
-\[
+$$
 \pi_\theta(a_{t:t+H} \mid o_t, z), \quad z \sim q_\phi(z \mid a_{t:t+H}, o_t)
-\]
+$$
 
-During training, the CVAE encoder infers \(z\) from the demonstration; at test time, \(z \sim \mathcal{N}(0, I)\) samples a mode.
+During training, the CVAE encoder infers $z$ from the demonstration; at test time, $z \sim \mathcal{N}(0, I)$ samples a mode.
 
 **Demonstration Diversity vs. Consistency**  
 There is a tension between two desiderata:
@@ -369,7 +369,7 @@ Human video — YouTube cooking demonstrations, Epic-Kitchens, Ego4D — represe
 
 [EgoVLA](https://arxiv.org/abs/2507.12440) trains a Vision-Language-Action model on egocentric human videos to predict *human wrist and hand actions*. These are then retargeted to robot joint angles via inverse kinematics:
 
-\[
+$$
 \underbrace{
   \text{Egocentric video} \xrightarrow{\text{VLA}} \hat{p}^{\text{wrist}}_{t+1:t+H}
 }_{\text{human action prediction}}
@@ -377,7 +377,7 @@ Human video — YouTube cooking demonstrations, Epic-Kitchens, Ego4D — represe
 \underbrace{
   q^{\text{robot}}_{t+1:t+H}
 }_{\text{robot joint targets}}
-\]
+$$
 
 The model is then fine-tuned on a small number of robot demonstrations (~50 per task) to bridge the remaining embodiment gap. Significant improvements over baselines on bimanual manipulation benchmarks show that human video provides a meaningful initialization for dexterous skills.
 
@@ -388,13 +388,13 @@ Human hands differ fundamentally from robot grippers:
 - Unobserved contact forces in video  
 
 **Retargeting via IK:**  
-A standard retargeting pipeline tracks hand keypoints \(\{p_i^{\text{human}}\}\) (wrist, fingertips) and solves:
+A standard retargeting pipeline tracks hand keypoints $\{p_i^{\text{human}}\}$ (wrist, fingertips) and solves:
 
-\[
+$$
 q^* = \arg\min_q \sum_i \bigl\| \text{FK}(q)_i - \mathcal{T}(p_i^{\text{human}}) \bigr\|^2 + \lambda \|q - q_{\text{prev}}\|^2
-\]
+$$
 
-where \(\text{FK}(q)_i\) is the forward kinematics of the robot's \(i\)-th relevant joint, and \(\mathcal{T}\) is a learned or geometric mapping from human to robot keypoint space. The regularization term \(\lambda \|q - q_\text{prev}\|^2\) enforces trajectory smoothness.
+where $\text{FK}(q)_i$ is the forward kinematics of the robot's $i$-th relevant joint, and $\mathcal{T}$ is a learned or geometric mapping from human to robot keypoint space. The regularization term $\lambda \|q - q_\text{prev}\|^2$ enforces trajectory smoothness.
 
 **Limitations:**  
 - Unobserved forces cannot be recovered from RGB video  
@@ -445,11 +445,11 @@ The method requires no assumed knowledge of test-time camera angles and allows p
 
 DART's solution is to inject optimized noise into the *supervisor's* demonstrations during collection, forcing the supervisor to demonstrate corrective behavior from near-trajectory states:
 
-\[
+$$
 \tilde{a}_t = a_t^{\text{expert}} + \epsilon_t, \quad \epsilon_t \sim \mathcal{N}(0, \Sigma^*)
-\]
+$$
 
-where \(\Sigma^*\) is optimized to approximate the error distribution of the trained policy. The supervisor naturally compensates for the injected perturbations, producing a richer demonstration that covers the "recovery funnel" around the nominal trajectory.
+where $\Sigma^*$ is optimized to approximate the error distribution of the trained policy. The supervisor naturally compensates for the injected perturbations, producing a richer demonstration that covers the "recovery funnel" around the nominal trajectory.
 
 **Algorithm (simplified):**
 
@@ -485,13 +485,13 @@ Vision-Language-Action models that co-train on robot data and internet (image, t
 The right ratio depends on the degree of domain shift between in-domain and co-training data; more similar corpora warrant higher co-training weight.
 
 **Temperature-Based Resampling:**  
-To interpolate between task-proportional and uniform sampling, use a temperature \(T\):
+To interpolate between task-proportional and uniform sampling, use a temperature $T$:
 
-\[
+$$
 p_k \propto n_k^{1/T}
-\]
+$$
 
-where \(n_k\) is the number of demonstrations for task \(k\). \(T=1\) is proportional sampling; \(T \to \infty\) is uniform sampling. Values around \(T = 2\) are common in practice.
+where $n_k$ is the number of demonstrations for task $k$. $T=1$ is proportional sampling; $T \to \infty$ is uniform sampling. Values around $T = 2$ are common in practice.
 
 ---
 
@@ -554,7 +554,7 @@ Before training, apply:
 1. **Filtering:** Remove failed episodes, episodes shorter than 50 steps, or outlier episodes (e.g., joint limit violations)  
 2. **Normalization:** Compute per-dimension mean and standard deviation of `action` across the dataset; normalize to zero mean, unit variance  
 3. **Image compression:** Re-encode images to JPEG at quality 90 to reduce disk I/O during training  
-4. **Chunking:** Pre-compute action chunks of length \(H\) (e.g., \(H=100\)) with padding masks for episodes shorter than \(H\)
+4. **Chunking:** Pre-compute action chunks of length $H$ (e.g., $H=100$) with padding masks for episodes shorter than $H$
 
 ### Stage 5: Dataset Format Conversion
 
@@ -801,7 +801,7 @@ This chapter has established the data landscape for imitation learning:
 
 1. **Robot data is scarce but surprisingly efficient to use.** ACT achieves 80–90% success from 50 demonstrations; GPT-3 required 300B tokens. The difference is that robot demonstrations are dense, task-relevant, and at exactly the right level of abstraction.
 
-2. **Teleoperation is the primary data source.** ALOHA's leader-follower design, 4-camera setup, 14-DoF 50Hz recording, and ~$20k cost make it the reference platform for open-source IL research. Design choices — recording leader positions as actions, using wrist cameras, filtering for operator quality — have outsized impact on downstream policy performance.
+2. **Teleoperation is the primary data source.** ALOHA's leader-follower design, 4-camera setup, 14-DoF 50Hz recording, and ~\$20k cost make it the reference platform for open-source IL research. Design choices — recording leader positions as actions, using wrist cameras, filtering for operator quality — have outsized impact on downstream policy performance.
 
 3. **Large-scale datasets enable generalization.** OXE (160k tasks, 22 robots), DROID (76k trajectories, in-the-wild), and RT-1 (130k episodes, 700 tasks) provide the pre-training substrate for generalist policies. The key empirical finding: diversity beats quantity for cross-embodiment and cross-domain transfer.
 
