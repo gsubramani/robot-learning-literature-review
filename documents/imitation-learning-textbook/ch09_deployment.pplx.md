@@ -41,12 +41,12 @@ The right arm choice depends on your budget, required payload, and community sup
 
 | Robot | Cost (USD) | DoF | Payload | IL community support | Notes |
 |---|---|---|---|---|---|
-| WidowX 250 | ~\$3,000 | 6 | 250 g | High (BridgeV2) | Low-cost research standard |
-| ViperX 300 | ~\$5,500 | 6 | 750 g | High (BridgeV2) | More payload than WidowX |
-| Franka Panda | ~\$25,000 | 7 | 3 kg | Very high (research standard) | Torque control, force sensing built-in |
-| Universal Robots UR5 | ~\$35,000 | 6 | 5 kg | Moderate | Industrial reliability, no direct torque control |
-| UFACTORY xArm 6 | ~\$8,000 | 6 | 5 kg | Growing | Good value; xArm SDK well documented |
-| ALOHA (custom) | ~\$20,000 | 14 (bimanual) | 2×500 g | High (ACT papers) | Low-Dynamixel-based bimanual system |
+| WidowX 250 | `~$3,000` | 6 | 250 g | High (BridgeV2) | Low-cost research standard |
+| ViperX 300 | `~$5,500` | 6 | 750 g | High (BridgeV2) | More payload than WidowX |
+| Franka Panda | `~$25,000` | 7 | 3 kg | Very high (research standard) | Torque control, force sensing built-in |
+| Universal Robots UR5 | `~$35,000` | 6 | 5 kg | Moderate | Industrial reliability, no direct torque control |
+| UFACTORY xArm 6 | `~$8,000` | 6 | 5 kg | Growing | Good value; xArm SDK well documented |
+| ALOHA (custom) | `~$20,000` | 14 (bimanual) | 2×500 g | High (ACT papers) | Low-Dynamixel-based bimanual system |
 
 **Key recommendation:** For new projects, Franka Panda is the research standard if budget allows. For low-cost work, WidowX + BridgeV2 data gives access to a large pretrained-model ecosystem.
 

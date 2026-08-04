@@ -96,15 +96,15 @@ Normalization is critical. Without it, high-variance action dimensions (e.g., a 
 
 **Per-dimension normalization** to zero mean and unit variance (computed on the training set) is the standard approach:
 
-$$
+```math
 \hat{a}_i = \frac{a_i - \mu_i}{\sigma_i + \epsilon}
-$$
+```
 
 For joint positions, normalizing to $[-1, 1]$ using dataset min/max is common in ACT:
 
-$$
+```math
 \hat{q}_i = 2 \cdot \frac{q_i - q_i^{\min}}{q_i^{\max} - q_i^{\min}} - 1
-$$
+```
 
 Store the normalization statistics alongside model weights so they can be applied consistently at inference time.
 
@@ -161,15 +161,15 @@ for batch in dataloader:
 
 The KL loss for a diagonal Gaussian posterior has the closed-form:
 
-$$
+```math
 \mathcal{L}_{\text{KL}} = -\frac{1}{2} \sum_{j=1}^{d_z} \left(1 + \log \sigma_j^2 - \mu_j^2 - \sigma_j^2\right)
-$$
+```
 
 The total ACT loss is:
 
-$$
+```math
 \mathcal{L}_{\text{ACT}} = \mathcal{L}_{\text{recon}} + \beta \cdot \mathcal{L}_{\text{KL}}
-$$
+```
 
 ### 4.3.2 Inference with Temporal Ensembling
 
@@ -207,9 +207,9 @@ for t in range(episode_len):
 
 The weight assigned to prediction $i$ steps in the future is:
 
-$$
+```math
 w_i = e^{-m \cdot i}
-$$
+```
 
 This gives full weight to a prediction made for the *current* step and exponentially less weight to predictions that were made far in advance. Temporal ensembling smooths out jitter in individual predictions and has been shown to improve task success rates by several percentage points ([Zhao et al., 2023](https://arxiv.org/abs/2304.13705)).
 
@@ -236,9 +236,9 @@ Diffusion Policy ([Chi et al., 2023](https://arxiv.org/abs/2303.04137)) frames a
 
 The Denoising Diffusion Probabilistic Model (DDPM) forward process gradually adds noise to the clean action $a_0$:
 
-$$
+```math
 q(a_t | a_0) = \mathcal{N}\!\left(a_t;\, \sqrt{\bar{\alpha}_t}\, a_0,\, (1 - \bar{\alpha}_t) I\right)
-$$
+```
 
 where $\bar{\alpha}_t = \prod_{s=1}^{t} (1 - \beta_s)$ and $\{\beta_s\}$ is a noise schedule. The network is trained to predict the noise $\epsilon$ that was added:
 
@@ -381,9 +381,9 @@ for batch in dataloader:
 
 LoRA works by replacing the weight update $\Delta W \in \mathbb{R}^{d \times d}$ with a low-rank factorization:
 
-$$
+```math
 \Delta W = \frac{\alpha}{r} \cdot BA, \quad B \in \mathbb{R}^{d \times r},\; A \in \mathbb{R}^{r \times d}, \quad r \ll d
-$$
+```
 
 At initialization, $A$ is drawn from a Gaussian and $B = 0$, so $\Delta W = 0$ and the model starts from the pretrained weights.
 
@@ -431,9 +431,9 @@ def detokenize_action(
 
 With 256 bins over a $[-1, 1]$ range, the quantization error per dimension is at most:
 
-$$
+```math
 \epsilon_{\text{quant}} = \frac{2}{2 \times 256} = \frac{1}{256} \approx 0.004
-$$
+```
 
 This is typically within acceptable tolerance for robot control. OpenVLA uses 256 bins per action dimension, appending action tokens to the end of the language output sequence so that the standard cross-entropy training objective applies uniformly.
 
@@ -665,9 +665,9 @@ For simulation-based evaluation (where rollouts are cheap), evaluate every 500â€
 
 **Confidence intervals:** With 50 rollouts, the 95% confidence interval for a success rate $\hat{p}$ is approximately:
 
-$$
+```math
 \hat{p} \pm 1.96 \sqrt{\frac{\hat{p}(1-\hat{p})}{N}}
-$$
+```
 
 For $\hat{p} = 0.7, N = 50$, this gives $\pm 0.127$ â€” a wide interval. Report confidence intervals alongside success rates to avoid over-interpreting small differences.
 

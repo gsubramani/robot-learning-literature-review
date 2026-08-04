@@ -36,17 +36,17 @@ IRL flips the RL problem: instead of learning a policy given a reward, it learns
 
 **MaxEnt IRL (Ziebart et al., 2008).** The core insight is that among all reward functions consistent with observed behavior, choose the one that makes the demonstrated trajectories *most likely under a maximum-entropy distribution*. Formally, trajectories are distributed as:
 
-$$
+```math
 P(\tau) \propto \exp\!\left(R_\psi(\tau)\right)
-$$
+```
 
 where $R_\psi(\tau) = \sum_t r_\psi(s_t, a_t)$ is a learned reward parameterized by $\psi$. The maximum-entropy principle avoids overfitting to idiosyncrasies of the demonstrations; it produces the least-committal reward consistent with the feature expectations observed in the data.
 
 The bi-level optimization is:
 
-$$
+```math
 \max_\psi \; \min_\pi \; \mathbb{E}_\pi[R_\psi(\tau)] - \mathbb{E}_{\pi^*}[R_\psi(\tau)]
-$$
+```
 
 The inner minimization finds the policy that minimizes the learned reward (i.e., that most looks like the expert). The outer maximization finds the reward that best separates the expert from the current policy. In practice, this requires alternating between running RL with the current reward and updating the reward to increase the margin.
 
@@ -58,15 +58,15 @@ The inner minimization finds the policy that minimizes the learned reward (i.e.,
 
 **Discriminator objective.** A binary classifier $D_\phi : \mathcal{S} \times \mathcal{A} \to [0,1]$ is trained to distinguish expert state-action pairs from policy-generated ones:
 
-$$
+```math
 \max_\phi \; \mathbb{E}_{\pi^*}[\log D_\phi(s,a)] + \mathbb{E}_{\pi_\theta}[\log(1 - D_\phi(s,a))]
-$$
+```
 
 **Policy objective.** The policy is trained with RL using $-\log D_\phi(s,a)$ as a proxy reward (the log-likelihood that the discriminator thinks the action came from the expert), regularized by a causal entropy term:
 
-$$
+```math
 \min_\theta \; -\mathbb{E}_{\pi_\theta}[\log D_\phi(s,a)] + \lambda H(\pi_\theta)
-$$
+```
 
 The entropy bonus $\lambda H(\pi_\theta)$ prevents the policy from collapsing to a single mode, mirroring the MaxEnt IRL spirit.
 
@@ -118,9 +118,9 @@ A practically popular pattern is to use IL to get most of the way there, then tr
 
 The combined policy is:
 
-$$
+```math
 a = \pi_\mathrm{IL}(s) + \pi_\mathrm{RL}(s)
-$$
+```
 
 The IL policy $\pi_\mathrm{IL}$ (frozen after pre-training) provides a strong baseline action. The residual policy $\pi_\mathrm{RL}$ starts near zero and learns small corrections. This decomposition has several advantages:
 
@@ -213,15 +213,15 @@ class RAPLReward(nn.Module):
 
 Group Relative Policy Optimization (GRPO) eliminates the need for a separate value network by comparing a *group* of sampled trajectories against each other. For each prompt (observation + instruction), the policy generates $G$ rollouts; the advantage of rollout $i$ is:
 
-$$
+```math
 \hat{A}_i = \frac{r_i - \mathrm{mean}(\{r_j\}_{j=1}^G)}{\mathrm{std}(\{r_j\}_{j=1}^G)}
-$$
+```
 
 The policy is updated with a clipped surrogate objective:
 
-$$
+```math
 \mathcal{L}_\mathrm{GRPO}(\theta) = \frac{1}{G} \sum_{i=1}^G \min\!\left(\frac{\pi_\theta(a_i|o)}{\pi_{\theta_\mathrm{old}}(a_i|o)} \hat{A}_i,\; \mathrm{clip}\!\left(\frac{\pi_\theta}{\pi_{\theta_\mathrm{old}}}, 1-\varepsilon, 1+\varepsilon\right)\hat{A}_i\right) - \beta \, D_\mathrm{KL}(\pi_\theta \| \pi_\mathrm{ref})
-$$
+```
 
 **WMPO (Zhu et al., 2025)** — World Model-based Policy Optimization — applies GRPO to VLAs without requiring real robot interaction ([Zhu et al., 2025](https://arxiv.org/abs/2511.09515)). The key components are:
 
@@ -288,9 +288,9 @@ The canonical hierarchical decomposition separates planning from execution:
 
 The high-level policy operates at a longer timescale (every $k$ steps), while the low-level policy runs at full control frequency. This **temporal abstraction** reduces the effective horizon for each level:
 
-$$
+```math
 T_\mathrm{eff} = \frac{T}{k}
-$$
+```
 
 Training from demonstrations is done by relabeling. Each trajectory $\{(s_t, a_t)\}$ is annotated with subgoals by segmenting it into skill segments. The high-level policy is trained on $(s_t, g_{t+k})$ pairs; the low-level policy on $(s_t, g, a_t)$ tuples where $g$ is the segment endpoint.
 
@@ -323,9 +323,9 @@ class HierarchicalPolicy(nn.Module):
 
 The **options framework** (Sutton, Precup & Singh, 1999) formalizes temporally extended actions. An option $\omega$ is a triple:
 
-$$
+```math
 \omega = \left(\mathcal{I}_\omega \subseteq \mathcal{S},\; \pi_\omega : \mathcal{S} \times \mathcal{A} \to [0,1],\; \beta_\omega : \mathcal{S} \to [0,1]\right)
-$$
+```
 
 - $\mathcal{I}_\omega$: **initiation set** — states from which the option can be invoked.
 - $\pi_\omega$: **intra-option policy** — low-level behavior while the option runs.
@@ -348,9 +348,9 @@ Natural language provides a semantically rich intermediate representation for hi
 
 **Visual chain-of-thought (CoT-VLA).** Rather than language tokens, CoT-VLA (2025) uses *predicted future image frames* as the intermediate reasoning step ([CoT-VLA, CVPR 2025](https://arxiv.org/html/2503.22020v1)):
 
-$$
+```math
 \underbrace{\hat{s}_{t+n}}_{\text{subgoal image}} \leftarrow f_\theta(s_t, \ell) \qquad \text{then} \qquad a_{t:t+m} \leftarrow g_\theta(s_t, \hat{s}_{t+n}, \ell)
-$$
+```
 
 The model first autoregressively predicts a future frame representing the desired intermediate state, then generates an action chunk to reach it. Pretraining on action-less video data improves downstream performance even on different robot platforms. CoT-VLA achieves a 17% improvement over the prior state of the art on real-world manipulation and 6% in simulation. Crucially, improvements in subgoal image generation quality translate directly to higher task success—a virtuous cycle as generative models improve.
 
@@ -460,9 +460,9 @@ Data augmentation techniques extend the effective coverage of a fixed demonstrat
 
 Formally, demonstrated actions are perturbed as:
 
-$$
+```math
 \tilde{a} = a^* + \epsilon, \qquad \epsilon \sim \mathcal{N}(0, \Sigma)
-$$
+```
 
 The noise covariance $\Sigma$ is optimized to approximate the error distribution of the trained policy, making the injected noise *just large enough* to simulate realistic errors without overwhelming the supervisor.
 
@@ -543,9 +543,9 @@ Standard DAgger accepts the policy's actions whenever possible and queries the e
 
 **EnsembleDAgger** (Menda et al., 2018) approximates policy uncertainty using an ensemble of $N$ neural networks. Each network $f_i$ predicts an action; the ensemble disagreement serves as an uncertainty estimate:
 
-$$
+```math
 \sigma^2_\mathrm{ensemble}(s) = \frac{1}{N} \sum_{i=1}^N \|f_i(s) - \bar{f}(s)\|^2
-$$
+```
 
 where $\bar{f}(s) = \frac{1}{N}\sum_i f_i(s)$. The policy acts autonomously if $\sigma^2_\mathrm{ensemble}(s) < \chi$ (doubt threshold); otherwise, the expert is queried. This dual rule—low discrepancy *and* low doubt—constrains the probability of failure more tightly than single-threshold approaches.
 
@@ -571,9 +571,9 @@ class EnsembleDAggerPolicy(nn.Module):
 
 **Control Barrier Functions (CBFs)** provide formal safety guarantees by defining a safe set $\mathcal{C} = \{x : h(x) \geq 0\}$ and enforcing a constraint that the system stays within it. A CBF-based safety filter takes the policy's nominal action $u_\mathrm{nom}$ and solves a Quadratic Program (QP) to find the nearest safe action:
 
-$$
+```math
 u^* = \underset{u}{\arg\min}\; \|u - u_\mathrm{nom}\|^2 \quad \text{subject to} \quad \dot{h}(x, u) \geq -\alpha(h(x))
-$$
+```
 
 where $\alpha$ is a class-$\mathcal{K}$ function. This filter can be applied as a post-processing layer on top of any IL or RL policy without retraining.
 
@@ -621,9 +621,9 @@ Even with safety layers, detecting when a policy is *about to fail* allows the s
 
 **SAFE** (2025) introduces a multitask failure detector for VLAs ([SAFE, 2025](https://arxiv.org/abs/2506.09937)). The key observation is that a VLA's internal hidden-state representations are well-separated for successful and failing rollouts—and this separation is *generic across tasks*. SAFE trains a lightweight probe (MLP or LSTM) on top of frozen VLA features:
 
-$$
+```math
 s_t = \sigma\!\left(f_\mathrm{SAFE}(\mathbf{e}_{0:t})\right) \in [0, 1]
-$$
+```
 
 where $\mathbf{e}_{0:t}$ is the sequence of VLA hidden states and $s_t$ is the predicted failure probability. The threshold for triggering an alert is calibrated using **conformal prediction**, which provides distribution-free coverage guarantees: the system will correctly flag a failure with at least $1 - \delta$ probability, regardless of the task distribution.
 

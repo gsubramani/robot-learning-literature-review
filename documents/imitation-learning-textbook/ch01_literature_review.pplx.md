@@ -25,9 +25,9 @@ Imitation learning (IL) — also called learning from demonstration (LfD) — is
 
 Behavioral Cloning (BC) reduces imitation to supervised learning. Given a dataset $\mathcal{D} = \{(s_i, a_i^*)\}$ of state-action pairs collected under the expert policy $\pi^*$, a policy $\hat{\pi}_\theta$ is trained to minimize the surrogate loss:
 
-$$
+```math
 \mathcal{L}_{\text{BC}}(\theta) = \mathbb{E}_{(s,a^*) \sim \mathcal{D}} \left[ \ell\left(\hat{\pi}_\theta(s),\, a^*\right) \right]
-$$
+```
 
 where $\ell$ is mean-squared error for continuous actions or cross-entropy for discrete ones.
 
@@ -39,9 +39,9 @@ The fundamental limitation of BC is error compounding under distribution shift. 
 
 The formal cost of this compounding effect was established by [Ross and Bagnell (2010)](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf) via Theorem 2.1: a BC policy with per-step error $\epsilon$ under the expert distribution incurs expected total cost bounded by
 
-$$
+```math
 J(\hat{\pi}) \leq J(\pi^*) + T^2 \epsilon
-$$
+```
 
 where $T$ is the horizon length. This $\mathcal{O}(T^2 \epsilon)$ scaling is tight — there exist problem instances where the bound is achieved with equality — and is catastrophic for long-horizon tasks. For a 500-step manipulation task with $\epsilon = 0.01$, the error budget is $2500 \cdot \epsilon$, not $5 \cdot \epsilon$.
 
@@ -67,9 +67,9 @@ Return best π̂ᵢ on validation
 
 The **mixture policy** at iteration $i$ is:
 
-$$
+```math
 \pi_i = \beta_i \pi^* + (1-\beta_i)\hat{\pi}_i
-$$
+```
 
 where $\{\beta_i\}$ is a mixing schedule satisfying $\beta_i \to 0$ as $i \to \infty$ (e.g., $\beta_i = p^{i-1}$ for $p \in (0,1)$, or $\beta_1 = 1, \beta_{i>1} = 0$ for the parameter-free variant). At early iterations, the expert provides most of the control, ensuring safe data collection; as $\hat{\pi}$ matures, the learner increasingly controls the trajectory and the expert labels states near the learner's distribution.
 
@@ -77,9 +77,9 @@ where $\{\beta_i\}$ is a mixing schedule satisfying $\beta_i \to 0$ as $i \to \i
 
 DAgger's main theoretical result (Theorem 3.2 from [Ross et al., 2011](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf)) is that after $N = \tilde{\mathcal{O}}(T)$ iterations with dataset aggregation, there exists a policy $\hat{\pi}$ in the sequence such that:
 
-$$
+```math
 J(\hat{\pi}) \leq J(\pi^*) + u \cdot T \cdot \epsilon_N + \mathcal{O}(1)
-$$
+```
 
 where $\epsilon_N = \min_\pi \frac{1}{N}\sum_{i=1}^N \mathbb{E}_{s \sim d^{\pi_i}}[\ell(s,\pi)]$ is the average surrogate loss under the aggregated datasets, and $u$ bounds the per-step regret of following a non-expert action ($u = 1$ for the 0-1 loss against the expert, $u = \mathcal{O}(T)$ in the worst case). The improvement over BC is stark: the dependence on horizon drops from $\mathcal{O}(T^2 \epsilon)$ to $\mathcal{O}(T \epsilon)$ — linear rather than quadratic.
 
@@ -95,9 +95,9 @@ The intuition is that DAgger trains on a distribution that closely approximates 
 
 Early generative approaches to BC represented the policy $\pi(a \mid s)$ as a Gaussian Mixture Model (GMM):
 
-$$
+```math
 \pi(a \mid s) = \sum_{k=1}^K \phi_k(s)\, \mathcal{N}(a \mid \mu_k(s), \Sigma_k(s))
-$$
+```
 
 where the mixing weights $\phi_k(s)$, means $\mu_k(s)$, and covariances $\Sigma_k(s)$ are all state-dependent, typically parameterized by neural networks. GMMs were attractive because they can, in principle, capture *multimodal* action distributions — a critical property when multiple distinct behaviors are consistent with a single observation (e.g., a robot facing a wall can turn left or right). In practice, GMMs with differentiable parameters can be trained by maximizing the log-likelihood of demonstrations, and mode selection at test time is performed by sampling from the mixture or taking the maximum-likelihood mode.
 
@@ -107,25 +107,25 @@ The primary limitation is mode collapse: the EM-style training dynamics tend to 
 
 **Dynamic Movement Primitives** (DMPs), formalized by [Pastor et al. (2009)](https://doi.org/10.1109/robot.2009.5152385) and extensively surveyed by Ijspeert et al. (2013), represent motor skills as stable second-order dynamical systems perturbed by a learned forcing function. A discrete DMP for a scalar degree of freedom takes the form:
 
-$$
+```math
 \tau \dot{v} = K(g - y) - D v - K(g - y_0)\, s + K\, f(s)
-$$
+```
 
-$$
+```math
 \tau \dot{y} = v
-$$
+```
 
-$$
+```math
 \tau \dot{s} = -\alpha_s s
-$$
+```
 
 where $y$ is the trajectory, $g$ is the goal, $y_0$ is the starting position, $s \in [0,1]$ is a phase variable decaying exponentially (with rate $\alpha_s$), $K$ and $D$ are spring and damping constants (typically chosen for critical damping: $D = 2\sqrt{K}$), and $f(s)$ is the *forcing function* — a weighted sum of Gaussian basis functions fitted to the demonstrated trajectory.
 
 The forcing function is what gives DMPs expressiveness: it shapes the canonical spring-damper trajectory to reproduce complex observed movements. Given a demonstration $\{y_t^*, \dot{y}_t^*, \ddot{y}_t^*\}$, the target forcing function is computed analytically:
 
-$$
+```math
 f^*(s) = \frac{\tau \ddot{y}^* - K(g - y^*) + D\dot{y}^* + K(g - y_0)\, s}{K}
-$$
+```
 
 and a weighted regression (e.g., locally weighted regression) fits the basis functions to $f^*(s)$.
 
@@ -142,9 +142,9 @@ The limitations are equally clear: DMPs are low-dimensional, task-specific repre
 
 The theoretical motivation begins with inverse reinforcement learning (IRL): imitation can be understood as finding a reward function $r$ for which the expert is optimal, then solving the induced RL problem. Ho and Ermon showed that this two-step procedure reduces to directly minimizing a divergence between the occupancy measures $\rho_\pi(s,a)$ and $\rho_{\pi^*}(s,a)$. When the divergence is Jensen-Shannon, the resulting minimax objective is:
 
-$$
+```math
 \min_\pi \max_D\; \mathbb{E}_\pi\left[\log D(s,a)\right] + \mathbb{E}_{\pi^*}\left[\log\left(1 - D(s,a)\right)\right] - \lambda H(\pi)
-$$
+```
 
 where $D : \mathcal{S} \times \mathcal{A} \to [0,1]$ is a discriminator that attempts to distinguish learner from expert state-action pairs, and $H(\pi)$ is a causal entropy regularizer with coefficient $\lambda \geq 0$. The policy $\pi$ is simultaneously trained (via TRPO or PPO) to maximize $\mathbb{E}_\pi[\log D(s,a)]$ — i.e., to fool the discriminator into classifying its state-action pairs as expert.
 
@@ -198,9 +198,9 @@ The period from 2016 to 2021 was characterized by the application of deep learni
 
 The key architectural innovation was **spatial softmax**: rather than using global average pooling to aggregate convolutional features, a spatial softmax layer computes the expected 2D position of each feature map channel:
 
-$$
+```math
 c_{k,x} = \sum_{i,j} \frac{\exp(a_{ijk}/T)}{\sum_{i',j'} \exp(a_{i'j'k}/T)} \cdot x_{ij}
-$$
+```
 
 yielding a compact set of spatial keypoints that capture task-relevant object positions while preserving the equivariance properties needed for manipulation (a gripper near an object looks similar regardless of slight viewpoint changes). The policies had 92,000 parameters and controlled 7-DoF arms at joint-torque level, learning tasks such as screwing a bottle cap and placing a coat hanger from 30–50 demonstrations.
 
@@ -210,15 +210,15 @@ This work established the visuomotor policy template that most subsequent deep I
 
 [Florence, Lynch, Zeng et al. (2021)](https://arxiv.org/abs/2109.00137) — **IBC** (Implicit Behavioral Cloning) — challenged the standard BC formulation at a foundational level. Rather than training an explicit policy $\hat{a} = F_\theta(o)$, IBC represents the policy as the argmin of a learned energy function:
 
-$$
+```math
 \hat{a} = \arg\min_{a \in \mathcal{A}}\; E_\theta(o, a)
-$$
+```
 
 where $E_\theta : \mathcal{O} \times \mathcal{A} \to \mathbb{R}$ is an energy-based model (EBM) trained with the InfoNCE objective:
 
-$$
+```math
 \mathcal{L}_{\text{InfoNCE}} = -\mathbb{E}\left[\log \frac{e^{-E_\theta(o_i, a_i)}}{e^{-E_\theta(o_i, a_i)} + \sum_{j=1}^{N_{\text{neg}}} e^{-E_\theta(o_i, \tilde{a}_j)}}\right]
-$$
+```
 
 where $\{\tilde{a}_j\}_{j=1}^{N_\text{neg}}$ are negative (non-expert) actions sampled uniformly from the action space for contrastive training. At inference time, the optimal action is found via derivative-free optimization (stochastic Langevin sampling or gradient descent on $E_\theta$).
 
@@ -320,17 +320,17 @@ BeT significantly outperforms BC, IBC, and GMM-based methods on multimodal bench
 
 2. **Early language fusion via FiLM.** Feature-wise Linear Modulation (FiLM) layers inject the task instruction (embedded via Universal Sentence Encoder into a 512-D vector) into the EfficientNet feature extraction. Specifically, within each MBConv block of EfficientNet, FiLM applies an affine transformation:
 
-   $$
+   ```math
    \text{FiLM}(\mathbf{f}; \mathbf{z}) = \boldsymbol{\gamma}(\mathbf{z}) \odot \mathbf{f} + \boldsymbol{\beta}(\mathbf{z})
-   $$
+   ```
 
    where $\boldsymbol{\gamma}, \boldsymbol{\beta} : \mathbb{R}^{512} \to \mathbb{R}^C$ are learned linear projections of the language embedding. Initializing FiLM parameters to the identity transformation allows stable training from a pretrained EfficientNet checkpoint.
 
 3. **Token compression via TokenLearner.** The 81 spatial tokens per frame (9×9 flattened) are compressed by **TokenLearner** to 8 learned summary tokens per frame via element-wise attention:
 
-   $$
+   ```math
    \mathbf{z}_i = A_i(\mathbf{X}) = \text{sigmoid}(\mathbf{W}_i \mathbf{X}) \cdot \mathbf{X}
-   $$
+   ```
 
    aggregating features spatially. Across 6 frames this yields 48 tokens total, enabling transformer computation at interactive rates (3 Hz inference, ~15 ms per step on hardware).
 
@@ -356,9 +356,9 @@ BeT significantly outperforms BC, IBC, and GMM-based methods on multimodal bench
 
 The training objective is the CVAE ELBO:
 
-$$
+```math
 \mathcal{L}_{\text{ACT}} = \mathbb{E}_{q_\phi}\left[\sum_{i=0}^{k-1}\|\hat{a}_{t+i} - a_{t+i}\|^2\right] + \beta \cdot D_{\text{KL}}\left(q_\phi(z \mid a_{t:t+k}, s_t) \;\|\; p(z)\right)
-$$
+```
 
 where $p(z) = \mathcal{N}(0, I)$ is the prior, and $\beta$ balances reconstruction fidelity against posterior regularization.
 
@@ -418,9 +418,9 @@ class ACT(nn.Module):
 
 **Temporal ensembling.** To avoid discontinuities at chunk boundaries, ACT uses temporal ensembling: at each timestep $t$, multiple overlapping chunk predictions $\hat{a}_{t:t+k}^{(m)}$ are averaged with exponential weights:
 
-$$
+```math
 \bar{a}_t = \frac{\sum_{m} w_m \hat{a}_t^{(m)}}{\sum_m w_m}, \quad w_m = e^{-m \cdot \lambda}
-$$
+```
 
 where $m$ indexes how many steps ago chunk prediction $m$ was made, and $\lambda$ controls the recency bias.
 
@@ -432,21 +432,21 @@ Trained on only 50 demonstrations per task (approximately 10 minutes of data), A
 
 **Formulation.** Define the forward (noising) process as:
 
-$$
+```math
 q(x_k \mid x_0) = \mathcal{N}(x_k; \sqrt{\bar{\alpha}_k}\, x_0,\; (1 - \bar{\alpha}_k) I)
-$$
+```
 
 where $x_0$ is the ground-truth action sequence, $k \in \{0, 1, \ldots, K\}$ is the diffusion step, and $\{\bar{\alpha}_k\}$ is the noise schedule (cosine schedule from Nichol and Dhariwal, 2021). The denoising network $\epsilon_\theta(x_k, k, o)$ is trained to predict the noise:
 
-$$
+```math
 \mathcal{L}_{\text{DDPM}} = \mathbb{E}_{x_0, k, \epsilon, o} \left[\| \epsilon - \epsilon_\theta(\sqrt{\bar{\alpha}_k}\, x_0 + \sqrt{1-\bar{\alpha}_k}\, \epsilon,\; k,\; o)\|^2\right]
-$$
+```
 
 where $o$ is the observation context (camera images, proprioception). At inference time, actions are sampled by starting from Gaussian noise and iteratively denoising via the **DDPM reverse process**:
 
-$$
+```math
 x_{k-1} = \frac{1}{\sqrt{\alpha_k}}\!\left(x_k - \frac{1-\alpha_k}{\sqrt{1-\bar{\alpha}_k}}\,\epsilon_\theta(x_k, k, o)\right) + \sigma_k\, z
-$$
+```
 
 where $z \sim \mathcal{N}(0, I)$, $\alpha_k = \bar{\alpha}_k / \bar{\alpha}_{k-1}$, and $\sigma_k = \sqrt{(1-\alpha_k)(1-\bar{\alpha}_{k-1})/(1-\bar{\alpha}_k)}$. For faster inference, **DDIM** (denoising diffusion implicit models) removes the stochastic term, enabling deterministic sampling with 10–20 denoising steps vs. the standard 100.
 
@@ -619,21 +619,21 @@ class OpenVLA(nn.Module):
 
 **Flow matching.** Where diffusion defines a forward process via SDEs and a reverse process via score matching, flow matching defines a deterministic ODE trajectory connecting a noise distribution to the data distribution. The vector field $v_\theta(x_t, t)$ is trained to satisfy:
 
-$$
+```math
 v_\theta(x_t, t) = x_1 - x_0
-$$
+```
 
 where $x_0 \sim \mathcal{N}(0, I)$ is noise, $x_1$ is the target action, and $x_t = (1-t)\,x_0 + t\,x_1$ is the linear interpolation (Conditional Flow Matching with optimal transport paths). The training loss is:
 
-$$
+```math
 \mathcal{L}_{\text{FM}} = \mathbb{E}_{t, x_0, x_1, o}\left[\|v_\theta(x_t, t, o) - (x_1 - x_0)\|^2\right]
-$$
+```
 
 At inference, actions are generated by solving the ODE:
 
-$$
+```math
 \frac{dx}{dt} = v_\theta(x_t, t, o), \quad x_0 \sim \mathcal{N}(0, I)
-$$
+```
 
 via simple Euler integration over $T_{\text{steps}} = 10$ steps — significantly fewer than DDPM (100 steps) while maintaining action quality. The conditional flow matching formulation avoids the score matching instabilities that can arise in diffusion models at low noise levels.
 

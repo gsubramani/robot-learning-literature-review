@@ -8,9 +8,9 @@
 
 The simplest approach to imitation learning is behavioral cloning (BC): treat the expert demonstration dataset as supervised data and train a policy $\pi_\theta$ to maximize the likelihood of observed actions given observations. The training objective is:
 
-$$
+```math
 \mathcal{L}_{BC} = \mathbb{E}_{(s,a) \sim \mathcal{D}} \left[-\log \pi_\theta(a \mid s)\right]
-$$
+```
 
 where $\mathcal{D} = \{(s_i, a_i)\}_{i=1}^{N}$ is the demonstration dataset collected from an expert policy $\pi^*$. For continuous action spaces, $\pi_\theta$ is typically a Gaussian policy; for discrete spaces, a softmax classifier. The loss reduces to mean squared error (MSE) when the policy outputs a deterministic point estimate.
 
@@ -58,9 +58,9 @@ The CVAE introduces a latent style variable $z \in \mathbb{R}^{32}$ that capture
 
 The encoder approximates the posterior:
 
-$$
+```math
 q_\phi(z \mid a_{t:t+k}, \bar{o}_t)
-$$
+```
 
 **Inputs:**
 - Joint positions $\bar{o}_t \in \mathbb{R}^{14}$ (7 DOF per arm, both arms).
@@ -95,9 +95,9 @@ Total visual tokens: $4 \times 300 = 1200$ tokens in $\mathbb{R}^{512}$.
 
 **Total decoder input to transformer encoder:**
 
-$$
+```math
 (1200 + 1 + 1) = 1202 \text{ tokens}, \quad \text{each in } \mathbb{R}^{512}
-$$
+```
 
 **Transformer encoder.** A standard transformer encoder with:
 - 4 self-attention layers
@@ -116,9 +116,9 @@ Each query cross-attends to the encoder's 1202-token output, and the decoder app
 
 **Output head.** A two-layer MLP projects each of the $k$ hidden states to $\mathbb{R}^{14}$, producing the predicted chunk:
 
-$$
+```math
 \hat{a}_{t:t+k} \in \mathbb{R}^{k \times 14}
-$$
+```
 
 These are **absolute joint positions** (not deltas) for both arms.
 
@@ -153,23 +153,23 @@ Style variable z (32D) ─► Linear ─► 1 × 512 token            │
 
 The CVAE objective is the standard evidence lower bound (ELBO), combining a reconstruction term and a KL regularization term:
 
-$$
+```math
 \mathcal{L} = \mathcal{L}_{\text{recon}} + \beta \, \mathcal{L}_{\text{reg}}
-$$
+```
 
-$$
+```math
 \mathcal{L}_{\text{recon}} = \mathbb{E}_{z \sim q_\phi} \left[ \| \hat{a}_{t:t+k} - a_{t:t+k} \|_1 \right]
-$$
+```
 
-$$
+```math
 \mathcal{L}_{\text{reg}} = D_{\text{KL}}\!\left( q_\phi(z \mid a_{t:t+k}, \bar{o}_t) \,\Big\|\, \mathcal{N}(0, I) \right)
-$$
+```
 
 The KL term has a closed form for diagonal Gaussians:
 
-$$
+```math
 D_{\text{KL}} = \frac{1}{2} \sum_{j=1}^{32} \left( \mu_j^2 + \sigma_j^2 - \log \sigma_j^2 - 1 \right)
-$$
+```
 
 The weight $\beta = 10$ was found through ablation; it is large enough to encourage the posterior to stay close to the prior (ensuring $z = \mathbf{0}$ at test time is a reasonable action mode) without collapsing the latent space.
 
@@ -187,9 +187,9 @@ ACT resolves this with **temporal ensembling**: the policy is queried at every t
 
 Denoting $A_t[i]$ as the prediction for time $t$ made by the query at $t - i$, the executed action is the weighted average:
 
-$$
+```math
 a_t = \frac{\sum_{i=0}^{\min(t,k-1)} w_i \, A_t[i]}{\sum_{i=0}^{\min(t,k-1)} w_i}, \qquad w_i = \exp(-m \cdot i)
-$$
+```
 
 where $m$ controls recency weighting. With $m = 0$, all predictions receive equal weight (pure averaging). With $m \to \infty$, only the most recent chunk is used (pure chunking with no ensembling). The default $m = 0.01$ creates a gentle exponential decay that weights recent predictions more but still smooths over the older ones, providing responsiveness while suppressing jerky transitions.
 
@@ -458,25 +458,25 @@ Diffusion Policy frames action generation as a denoising diffusion probabilistic
 
 **Forward process.** A clean action $x_0 \in \mathbb{R}^{T_p \times D}$ is corrupted over $K$ diffusion steps by adding Gaussian noise:
 
-$$
+```math
 q(x_k \mid x_0) = \mathcal{N}\!\left(x_k;\; \sqrt{\bar\alpha_k}\, x_0,\; (1 - \bar\alpha_k) I\right)
-$$
+```
 
 where $\bar\alpha_k = \prod_{i=1}^k \alpha_i$ and $\{\alpha_i\}$ is a cosine noise schedule. As $k \to K$, $x_k \to \mathcal{N}(0, I)$.
 
 **Reverse process (inference).** Starting from $x_K \sim \mathcal{N}(0, I)$, the model iteratively denoises:
 
-$$
+```math
 x_{k-1} = \frac{1}{\sqrt{\alpha_k}} \left( x_k - \frac{1 - \alpha_k}{\sqrt{1 - \bar\alpha_k}} \, \epsilon_\theta(x_k, k, o_t) \right) + \sigma_k z, \quad z \sim \mathcal{N}(0, I)
-$$
+```
 
 where $\epsilon_\theta(x_k, k, o_t)$ is the learned noise-prediction network conditioned on the current observation $o_t$.
 
 **Training objective.** The model is trained to predict the noise:
 
-$$
+```math
 \mathcal{L} = \mathbb{E}_{x_0, k, \epsilon} \left[ \left\| \epsilon - \epsilon_\theta\!\left( \sqrt{\bar\alpha_k}\, x_0 + \sqrt{1 - \bar\alpha_k}\, \epsilon,\; k,\; o_t \right) \right\|^2 \right]
-$$
+```
 
 This is equivalent to maximizing the ELBO of the data likelihood and admits a simple, stable MSE regression objective.
 
@@ -584,15 +584,15 @@ Image features from DINOv2 and SigLIP are concatenated along the channel dimensi
 
 **Flow matching action head.** Flow matching is a simulation-free generative modeling framework that learns to transport samples from a simple prior $x_0 \sim \mathcal{N}(0, I)$ to the data distribution $x_1 = \text{action}$ along straight-line paths:
 
-$$
+```math
 \frac{dx}{dt} = v_\theta(x_t, t, o), \quad x_t = t \cdot x_1 + (1-t) \cdot x_0, \quad t \in [0, 1]
-$$
+```
 
 The velocity field $v_\theta$ is trained to predict the direction from noise toward the action:
 
-$$
+```math
 \mathcal{L} = \mathbb{E}_{t, x_0, x_1} \left[ \left\| v_\theta\!\left( x_1 t + x_0(1-t),\; t,\; o \right) - (x_1 - x_0) \right\|^2 \right]
-$$
+```
 
 At inference, integration of this ODE from $t=0$ to $t=1$ traces a near-straight path from noise to action, requiring far fewer function evaluations (typically 10–20 Euler steps) than DDPM while achieving comparable or better sample quality.
 
