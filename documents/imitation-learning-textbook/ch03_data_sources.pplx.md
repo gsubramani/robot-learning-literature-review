@@ -29,7 +29,7 @@ A single ALOHA-style demonstration episode at 50 Hz is a sequence of tuples:
 \tau = \bigl\{(o_t,\, a_t)\bigr\}_{t=0}^{T}
 ```
 
-where each observation $o_t$ and action $a_t$ contains:
+where each observation $`o_t`$ and action $`a_t`$ contains:
 
 - **Images:** 4 cameras × 3 channels × 480 × 640 pixels → 3,686,400 uint8 values per timestep
 - **Joint positions:** 14-DoF (7 joints per arm) → 14 float32 values  
@@ -144,13 +144,13 @@ HoloDex combines an Oculus Quest hand tracking (no controllers, bare hand) with 
 Not all demonstrations are equally useful for learning. Several factors determine whether a dataset will yield a high-performing policy:
 
 **Non-Stationarity of Human Demonstrations**  
-Human operators do not execute the same motion twice. Given 50 demonstrations of the same task, you will observe at least 10–20 qualitatively distinct strategies (approach angle, grasp point, trajectory shape). This multimodality is a fundamental challenge for behavior cloning with MSE regression losses, which average over modes and produce blend trajectories that fail at all of them. ACT's CVAE architecture specifically addresses this by sampling a latent style variable $z$ that conditions the policy on a particular demonstration mode:
+Human operators do not execute the same motion twice. Given 50 demonstrations of the same task, you will observe at least 10–20 qualitatively distinct strategies (approach angle, grasp point, trajectory shape). This multimodality is a fundamental challenge for behavior cloning with MSE regression losses, which average over modes and produce blend trajectories that fail at all of them. ACT's CVAE architecture specifically addresses this by sampling a latent style variable $`z`$ that conditions the policy on a particular demonstration mode:
 
 ```math
 \pi_\theta(a_{t:t+H} \mid o_t, z), \quad z \sim q_\phi(z \mid a_{t:t+H}, o_t)
 ```
 
-During training, the CVAE encoder infers $z$ from the demonstration; at test time, $z \sim \mathcal{N}(0, I)$ samples a mode.
+During training, the CVAE encoder infers $`z`$ from the demonstration; at test time, $`z \sim \mathcal{N}(0, I)`$ samples a mode.
 
 **Demonstration Diversity vs. Consistency**  
 There is a tension between two desiderata:
@@ -388,13 +388,13 @@ Human hands differ fundamentally from robot grippers:
 - Unobserved contact forces in video  
 
 **Retargeting via IK:**  
-A standard retargeting pipeline tracks hand keypoints $\{p_i^{\text{human}}\}$ (wrist, fingertips) and solves:
+A standard retargeting pipeline tracks hand keypoints $`\{p_i^{\text{human}}\}`$ (wrist, fingertips) and solves:
 
 ```math
 q^* = \arg\min_q \sum_i \bigl\| \text{FK}(q)_i - \mathcal{T}(p_i^{\text{human}}) \bigr\|^2 + \lambda \|q - q_{\text{prev}}\|^2
 ```
 
-where $\text{FK}(q)_i$ is the forward kinematics of the robot's $i$-th relevant joint, and $\mathcal{T}$ is a learned or geometric mapping from human to robot keypoint space. The regularization term $\lambda \|q - q_\text{prev}\|^2$ enforces trajectory smoothness.
+where $`\text{FK}(q)_i`$ is the forward kinematics of the robot's $`i`$-th relevant joint, and $`\mathcal{T}`$ is a learned or geometric mapping from human to robot keypoint space. The regularization term $`\lambda \|q - q_\text{prev}\|^2`$ enforces trajectory smoothness.
 
 **Limitations:**  
 - Unobserved forces cannot be recovered from RGB video  
@@ -449,7 +449,7 @@ DART's solution is to inject optimized noise into the *supervisor's* demonstrati
 \tilde{a}_t = a_t^{\text{expert}} + \epsilon_t, \quad \epsilon_t \sim \mathcal{N}(0, \Sigma^*)
 ```
 
-where $\Sigma^*$ is optimized to approximate the error distribution of the trained policy. The supervisor naturally compensates for the injected perturbations, producing a richer demonstration that covers the "recovery funnel" around the nominal trajectory.
+where $`\Sigma^*`$ is optimized to approximate the error distribution of the trained policy. The supervisor naturally compensates for the injected perturbations, producing a richer demonstration that covers the "recovery funnel" around the nominal trajectory.
 
 **Algorithm (simplified):**
 
@@ -485,13 +485,13 @@ Vision-Language-Action models that co-train on robot data and internet (image, t
 The right ratio depends on the degree of domain shift between in-domain and co-training data; more similar corpora warrant higher co-training weight.
 
 **Temperature-Based Resampling:**  
-To interpolate between task-proportional and uniform sampling, use a temperature $T$:
+To interpolate between task-proportional and uniform sampling, use a temperature $`T`$:
 
 ```math
 p_k \propto n_k^{1/T}
 ```
 
-where $n_k$ is the number of demonstrations for task $k$. $T=1$ is proportional sampling; $T \to \infty$ is uniform sampling. Values around $T = 2$ are common in practice.
+where $`n_k`$ is the number of demonstrations for task $`k`$. $`T=1`$ is proportional sampling; $`T \to \infty`$ is uniform sampling. Values around $`T = 2`$ are common in practice.
 
 ---
 
@@ -554,7 +554,7 @@ Before training, apply:
 1. **Filtering:** Remove failed episodes, episodes shorter than 50 steps, or outlier episodes (e.g., joint limit violations)  
 2. **Normalization:** Compute per-dimension mean and standard deviation of `action` across the dataset; normalize to zero mean, unit variance  
 3. **Image compression:** Re-encode images to JPEG at quality 90 to reduce disk I/O during training  
-4. **Chunking:** Pre-compute action chunks of length $H$ (e.g., $H=100$) with padding masks for episodes shorter than $H$
+4. **Chunking:** Pre-compute action chunks of length $`H`$ (e.g., $`H=100`$) with padding masks for episodes shorter than $`H`$
 
 ### Stage 5: Dataset Format Conversion
 

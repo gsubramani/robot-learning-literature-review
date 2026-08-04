@@ -1,1 +1,7 @@
 .ai/scratch/*
+
+# Markdown Preview Enhanced scaffolds these next to .crossnote/config.js on
+# first preview. They are empty defaults; only config.js is tracked.
+.crossnote/head.html
+.crossnote/parser.js
+.crossnote/style.less

@@ -25,7 +25,7 @@ These three dimensions interact. Reducing memory through quantization typically 
 
 ## 2. Small-Scale: ACT and Similar
 
-**Action Chunking with Transformers (ACT)** represents the entry point for modern IL practitioners: a transformer-encoder/decoder architecture that predicts a chunk of $k$ future actions, trained with a CVAE objective.
+**Action Chunking with Transformers (ACT)** represents the entry point for modern IL practitioners: a transformer-encoder/decoder architecture that predicts a chunk of $`k`$ future actions, trained with a CVAE objective.
 
 **Parameters:** ~80 million (visual encoder + transformer)
 
@@ -273,13 +273,13 @@ For smaller policies (ACT, Diffusion Policy), quantization is rarely necessary; 
 
 ### 6.2 LoRA / QLoRA Fine-tuning
 
-Low-Rank Adaptation (LoRA) inserts trainable rank-$r$ matrices into the attention projection layers while freezing the original weights:
+Low-Rank Adaptation (LoRA) inserts trainable rank-$`r`$ matrices into the attention projection layers while freezing the original weights:
 
 ```math
 W' = W + \Delta W = W + \frac{\alpha}{r} BA, \quad B \in \mathbb{R}^{d \times r},\ A \in \mathbb{R}^{r \times k}
 ```
 
-For a 7B model with $r = 32$, LoRA reduces trainable parameters from 7B to ~100M — a 70× reduction in gradient memory.
+For a 7B model with $`r = 32`$, LoRA reduces trainable parameters from 7B to ~100M — a 70× reduction in gradient memory.
 
 **QLoRA** combines INT4 quantization of the frozen base model with LoRA adapters stored in BF16, making full-model fine-tuning feasible on a single A100 80 GB card for models up to ~13B parameters.
 

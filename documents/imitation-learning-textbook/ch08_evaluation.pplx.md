@@ -23,7 +23,7 @@ Success is binary per episode: either the robot completed the task or it did not
 - *Insertion:* peg is fully inserted (contact sensor triggered, or visual check)
 - *Drawer opening:* drawer displaced by at least 80% of its full range
 
-**Statistical considerations:** With $N = 20$ rollouts, a 95% confidence interval for a true success rate of 80% spans approximately $\pm 18\%$ (Wilson interval). Report confidence intervals, not just point estimates.
+**Statistical considerations:** With $`N = 20`$ rollouts, a 95% confidence interval for a true success rate of 80% spans approximately $`\pm 18\%`$ (Wilson interval). Report confidence intervals, not just point estimates.
 
 ### 1.2 Task Completion Rate
 
@@ -33,7 +33,7 @@ For long-horizon tasks with natural subtask boundaries, a binary success metric 
 \text{TCR} = \frac{1}{N \cdot K} \sum_{i=1}^{N} \sum_{k=1}^{K} \mathbf{1}[\text{stage } k \text{ completed in episode } i]
 ```
 
-where $K$ is the number of stages. This metric rewards partial progress and is especially useful when comparing two policies where neither achieves >50% binary success.
+where $`K`$ is the number of stages. This metric rewards partial progress and is especially useful when comparing two policies where neither achieves >50% binary success.
 
 ### 1.3 Recovery Rate
 
@@ -52,7 +52,7 @@ Split your evaluation objects/positions/backgrounds into:
 - **In-distribution (ID):** Same objects and positions seen during training
 - **Out-of-distribution (OOD):** Novel objects, new positions, different lighting, cluttered scenes
 
-Report both. A policy that achieves 90% ID and 10% OOD has not generalized. The gap $\text{SR}_{\text{ID}} - \text{SR}_{\text{OOD}}$ quantifies overfitting to the training setup.
+Report both. A policy that achieves 90% ID and 10% OOD has not generalized. The gap $`\text{SR}_{\text{ID}} - \text{SR}_{\text{OOD}}`$ quantifies overfitting to the training setup.
 
 ---
 
@@ -202,7 +202,7 @@ This result demonstrates that scale is not the primary driver of IL performance�
 
 **Symptom:** Two methods are reported as 80% vs. 85% success rate—but neither difference is statistically meaningful.
 
-With $N = 20$ rollouts, the standard error of a binomial proportion is:
+With $`N = 20`$ rollouts, the standard error of a binomial proportion is:
 
 ```math
 \text{SE} = \sqrt{\frac{p(1-p)}{N}} \approx \sqrt{\frac{0.5 \times 0.5}{20}} \approx 11\%
@@ -210,7 +210,7 @@ With $N = 20$ rollouts, the standard error of a binomial proportion is:
 
 A 5-percentage-point difference is noise, not signal.
 
-**Mitigation:** Report Wilson confidence intervals. Use $N \geq 50$ for comparisons you want to claim as statistically significant.
+**Mitigation:** Report Wilson confidence intervals. Use $`N \geq 50`$ for comparisons you want to claim as statistically significant.
 
 ### 4.3 Cherry-Picked Videos
 
@@ -245,7 +245,7 @@ Force profiles during manipulation tasks capture whether the robot is being appr
 **Metrics:**
 - Peak contact force (Newtons) during task execution
 - Time-averaged force integral (impulse) at contact events
-- Number of force limit violations ($F > F_{\max}$)
+- Number of force limit violations ($`F \gt F_{\max}`$)
 
 Requires a wrist-mounted force-torque sensor or joint torque estimation.
 
@@ -264,8 +264,8 @@ Report mean and standard deviation over successful episodes. A policy that succe
 Jerky trajectories stress hardware and indicate unstable policies.
 
 **Metrics:**
-- **Jerk:** $\dddot{\mathbf{q}}_t$, computed as third derivative of joint angles
-- **Mean absolute jerk:** $\frac{1}{T}\sum_t \|\dddot{\mathbf{q}}_t\|_2$
+- **Jerk:** $`\dddot{\mathbf{q}}_t`$, computed as third derivative of joint angles
+- **Mean absolute jerk:** $`\frac{1}{T}\sum_t \|\dddot{\mathbf{q}}_t\|_2`$
 - **Spectral analysis:** Power spectral density of joint velocity; high-frequency content indicates oscillation
 
 ```python
@@ -300,15 +300,15 @@ Ablations are the mechanism by which the research community understands *why* a 
 
 | Variable | Typical range | What you are testing |
 |---|---|---|
-| Chunk size $k$ | 1, 10, 50, 100 | Value of action chunking; effective horizon reduction |
-| CVAE weight $\beta$ | 0, 0.1, 1, 10 | Role of latent variable; $\beta=0$ reduces to pure BC |
+| Chunk size $`k`$ | 1, 10, 50, 100 | Value of action chunking; effective horizon reduction |
+| CVAE weight $`\beta`$ | 0, 0.1, 1, 10 | Role of latent variable; $`\beta=0`$ reduces to pure BC |
 | Temporal ensembling | on / off | Value of multi-chunk averaging |
 | Number of cameras | 1 (wrist only), 2, 4 | Information contribution of each camera |
 | Observation space | images only, qpos only, images + qpos | Value of proprioception |
 
 ### 6.2 How to Report Ablations
 
-**Minimum:** Mean success rate over 20 rollouts, 3 random seeds. Report as $\bar{p} \pm \sigma$ where $\sigma$ is the standard deviation across seeds.
+**Minimum:** Mean success rate over 20 rollouts, 3 random seeds. Report as $`\bar{p} \pm \sigma`$ where $`\sigma`$ is the standard deviation across seeds.
 
 **Better:** Wilson 95% confidence interval per condition. Flag pairwise differences that are not statistically significant.
 
@@ -317,15 +317,15 @@ Ablations are the mechanism by which the research community understands *why* a 
 | Configuration | Task A SR (%) | Task B SR (%) | Mean SR (%) |
 |---|---|---|---|
 | Full model | 85 ± 4 | 78 ± 6 | 81.5 |
-| No action chunking ($k=1$) | 42 ± 8 | 38 ± 9 | 40.0 |
+| No action chunking ($`k=1`$) | 42 ± 8 | 38 ± 9 | 40.0 |
 | No temporal ensembling | 80 ± 5 | 71 ± 7 | 75.5 |
 | Single camera (wrist only) | 65 ± 6 | 55 ± 8 | 60.0 |
 | No proprioception | 72 ± 5 | 68 ± 7 | 70.0 |
-| $\beta = 0$ (pure BC) | 50 ± 7 | 45 ± 8 | 47.5 |
+| $`\beta = 0`$ (pure BC) | 50 ± 7 | 45 ± 8 | 47.5 |
 
 ### 6.3 Common Ablation Mistakes
 
-**Ablating only on easy tasks:** If your baseline achieves 95% on Task A, removing a component drops it to 90%—a 5-point drop that is not statistically meaningful with $N=20$. Ablate on tasks where the full model scores 50–80% so there is room to detect degradation.
+**Ablating only on easy tasks:** If your baseline achieves 95% on Task A, removing a component drops it to 90%—a 5-point drop that is not statistically meaningful with $`N=20`$. Ablate on tasks where the full model scores 50–80% so there is room to detect degradation.
 
 **Running only one seed:** Random initialization and demonstration order can swing success rates by 10–15 points on small datasets. Three seeds is a minimum; five is better.
 

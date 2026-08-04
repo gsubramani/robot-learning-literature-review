@@ -6,13 +6,13 @@
 
 ### 1.1 Standard Formulation
 
-The simplest approach to imitation learning is behavioral cloning (BC): treat the expert demonstration dataset as supervised data and train a policy $\pi_\theta$ to maximize the likelihood of observed actions given observations. The training objective is:
+The simplest approach to imitation learning is behavioral cloning (BC): treat the expert demonstration dataset as supervised data and train a policy $`\pi_\theta`$ to maximize the likelihood of observed actions given observations. The training objective is:
 
 ```math
 \mathcal{L}_{BC} = \mathbb{E}_{(s,a) \sim \mathcal{D}} \left[-\log \pi_\theta(a \mid s)\right]
 ```
 
-where $\mathcal{D} = \{(s_i, a_i)\}_{i=1}^{N}$ is the demonstration dataset collected from an expert policy $\pi^*$. For continuous action spaces, $\pi_\theta$ is typically a Gaussian policy; for discrete spaces, a softmax classifier. The loss reduces to mean squared error (MSE) when the policy outputs a deterministic point estimate.
+where $`\mathcal{D} = \{(s_i, a_i)\}_{i=1}^{N}`$ is the demonstration dataset collected from an expert policy $`\pi^*`$. For continuous action spaces, $`\pi_\theta`$ is typically a Gaussian policy; for discrete spaces, a softmax classifier. The loss reduces to mean squared error (MSE) when the policy outputs a deterministic point estimate.
 
 A standard CNN or ResNet encodes image observations, a shallow MLP or lightweight transformer serves as the policy head, and training proceeds by standard SGD/Adam. This setup is operationally straightforward and surprisingly competitive on short-horizon tasks with near-i.i.d. test conditions.
 
@@ -20,9 +20,9 @@ A standard CNN or ResNet encodes image observations, a shallow MLP or lightweigh
 
 Despite its simplicity, vanilla BC has well-documented failure modes that become severe for precision manipulation:
 
-**Compounding errors (distribution shift).** BC trains on the marginal state distribution $d^{\pi^*}(s)$ induced by the expert. At test time, the learner's own policy $\pi_\theta$ is executed, inducing a different distribution $d^{\pi_\theta}(s)$. Even tiny per-step errors push the agent into states not covered by $\mathcal{D}$, where the policy has no training signal. Ross et al. (2011, DAgger) showed that the cumulative error grows as $O(T^2 \epsilon)$ for a horizon-$T$ task with per-step error $\epsilon$, compared to $O(T \epsilon)$ for an interactive learner. For long-horizon dexterous tasks, this quadratic blowup is catastrophic.
+**Compounding errors (distribution shift).** BC trains on the marginal state distribution $`d^{\pi^*}(s)`$ induced by the expert. At test time, the learner's own policy $`\pi_\theta`$ is executed, inducing a different distribution $`d^{\pi_\theta}(s)`$. Even tiny per-step errors push the agent into states not covered by $`\mathcal{D}`$, where the policy has no training signal. Ross et al. (2011, DAgger) showed that the cumulative error grows as $`O(T^2 \epsilon)`$ for a horizon-$`T`$ task with per-step error $`\epsilon`$, compared to $`O(T \epsilon)`$ for an interactive learner. For long-horizon dexterous tasks, this quadratic blowup is catastrophic.
 
-**Non-stationarity of demonstrations.** Human demonstrations exhibit temporal correlations: a human expert implicitly conditions each action on a mental model of what they just did and plan to do next. Treating $(s_t, a_t)$ pairs as i.i.d. ignores this — the learned policy sees individual frames rather than the coherent intention behind a motion.
+**Non-stationarity of demonstrations.** Human demonstrations exhibit temporal correlations: a human expert implicitly conditions each action on a mental model of what they just did and plan to do next. Treating $`(s_t, a_t)`$ pairs as i.i.d. ignores this — the learned policy sees individual frames rather than the coherent intention behind a motion.
 
 **Multimodality.** When a task admits multiple valid strategies (e.g., grasping an object from the left or the right), a unimodal Gaussian policy outputs the average of both modes, which corresponds to neither. This causes the policy to "average" over demonstrations in action space, producing physically invalid actions.
 
@@ -38,11 +38,11 @@ The architectures in the remainder of this chapter each address one or more of t
 
 ### 2.1 Motivation: Action Chunking
 
-The central idea in ACT is **action chunking**: instead of predicting a single action $a_t \in \mathbb{R}^{14}$ at each step, predict a contiguous sequence of $k$ actions $a_{t:t+k} \in \mathbb{R}^{k \times 14}$ and execute them open-loop before querying the policy again.
+The central idea in ACT is **action chunking**: instead of predicting a single action $`a_t \in \mathbb{R}^{14}`$ at each step, predict a contiguous sequence of $`k`$ actions $`a_{t:t+k} \in \mathbb{R}^{k \times 14}`$ and execute them open-loop before querying the policy again.
 
 This has two complementary benefits:
 
-**Reduced effective horizon.** If the true task horizon is $T$ and the policy predicts chunks of length $k$, the number of policy queries is $T/k$. Because compounding errors accumulate with each policy query, chunking reduces the effective error accumulation to $O((T/k)^2 \epsilon)$ under the DAgger error model. For $k=100$ at 50 Hz (2 seconds of open-loop execution), this is a 100× reduction in compounding error opportunities.
+**Reduced effective horizon.** If the true task horizon is $`T`$ and the policy predicts chunks of length $`k`$, the number of policy queries is $`T/k`$. Because compounding errors accumulate with each policy query, chunking reduces the effective error accumulation to $`O((T/k)^2 \epsilon)`$ under the DAgger error model. For $`k=100`$ at 50 Hz (2 seconds of open-loop execution), this is a 100× reduction in compounding error opportunities.
 
 **Temporal coherence.** Predicting an entire motion segment forces the model to commit to a coherent motion plan. Individual steps within the chunk are consistent with one another by construction, eliminating the high-frequency oscillation problem.
 
@@ -50,9 +50,9 @@ The practice of predicting multi-step action sequences has a psychological basis
 
 ### 2.2 Architecture: CVAE + Transformer
 
-A standard BC model predicts a single action given an observation. To predict an action chunk $a_{t:t+k}$, two design challenges arise: (1) the output is high-dimensional and temporally structured, and (2) demonstrations of the same task may follow qualitatively different motion strategies (multimodality). ACT addresses both with a **Conditional Variational Autoencoder (CVAE)** wrapped around a transformer backbone.
+A standard BC model predicts a single action given an observation. To predict an action chunk $`a_{t:t+k}`$, two design challenges arise: (1) the output is high-dimensional and temporally structured, and (2) demonstrations of the same task may follow qualitatively different motion strategies (multimodality). ACT addresses both with a **Conditional Variational Autoencoder (CVAE)** wrapped around a transformer backbone.
 
-The CVAE introduces a latent style variable $z \in \mathbb{R}^{32}$ that captures the "style" or "intention" of the demonstrated motion segment (e.g., approaching from the left versus the right). At training time, $z$ is inferred from the action chunk and observation via an encoder network. At test time, $z$ is fixed to zero (the prior mean), acting as a regularizer that encourages the policy to produce the most common demonstration style.
+The CVAE introduces a latent style variable $`z \in \mathbb{R}^{32}`$ that captures the "style" or "intention" of the demonstrated motion segment (e.g., approaching from the left versus the right). At training time, $`z`$ is inferred from the action chunk and observation via an encoder network. At test time, $`z`$ is fixed to zero (the prior mean), acting as a regularizer that encourages the policy to produce the most common demonstration style.
 
 #### 2.2.1 CVAE Encoder (Inference Network)
 
@@ -63,35 +63,35 @@ q_\phi(z \mid a_{t:t+k}, \bar{o}_t)
 ```
 
 **Inputs:**
-- Joint positions $\bar{o}_t \in \mathbb{R}^{14}$ (7 DOF per arm, both arms).
-- Action sequence $a_{t:t+k} \in \mathbb{R}^{k \times 14}$.
+- Joint positions $`\bar{o}_t \in \mathbb{R}^{14}`$ (7 DOF per arm, both arms).
+- Action sequence $`a_{t:t+k} \in \mathbb{R}^{k \times 14}`$.
 
 **Architecture:** A BERT-like transformer encoder with 4 self-attention layers. The input tokens are constructed as follows:
 
 1. A learnable `[CLS]` token is prepended.
-2. The joint position observation $\bar{o}_t \in \mathbb{R}^{14}$ is projected to $\mathbb{R}^{512}$ and appended as a single token.
-3. Each of the $k$ action vectors $a_{t+i} \in \mathbb{R}^{14}$, $i = 0, \ldots, k-1$, is projected to $\mathbb{R}^{512}$ and appended, yielding $k$ tokens.
+2. The joint position observation $`\bar{o}_t \in \mathbb{R}^{14}`$ is projected to $`\mathbb{R}^{512}`$ and appended as a single token.
+3. Each of the $`k`$ action vectors $`a_{t+i} \in \mathbb{R}^{14}`$, $`i = 0, \ldots, k-1`$, is projected to $`\mathbb{R}^{512}`$ and appended, yielding $`k`$ tokens.
 4. 1D sinusoidal positional embeddings are added to the sequence.
 
-Total encoder input: $(1 + 1 + k) \times 512$ tokens.
+Total encoder input: $`(1 + 1 + k) \times 512`$ tokens.
 
 **Output:** The hidden state at the `[CLS]` position is passed through two separate linear heads to produce:
-- Mean: $\mu \in \mathbb{R}^{32}$
-- Log-variance: $\log \sigma^2 \in \mathbb{R}^{32}$
+- Mean: $`\mu \in \mathbb{R}^{32}`$
+- Log-variance: $`\log \sigma^2 \in \mathbb{R}^{32}`$
 
-The posterior is a diagonal Gaussian: $q_\phi(z \mid a_{t:t+k}, \bar{o}_t) = \mathcal{N}(\mu, \text{diag}(\sigma^2))$.
+The posterior is a diagonal Gaussian: $`q_\phi(z \mid a_{t:t+k}, \bar{o}_t) = \mathcal{N}(\mu, \text{diag}(\sigma^2))`$.
 
 #### 2.2.2 CVAE Decoder (Policy Network)
 
-The decoder is the actual deployable policy. It takes as input the visual observations, joint positions, and the style variable $z$, and outputs the predicted action chunk $\hat{a}_{t:t+k}$.
+The decoder is the actual deployable policy. It takes as input the visual observations, joint positions, and the style variable $`z`$, and outputs the predicted action chunk $`\hat{a}_{t:t+k}`$.
 
-**Vision backbone.** Four RGB cameras capture the scene at resolution $480 \times 640$. Each image is processed independently by a **ResNet-18** backbone (pretrained on ImageNet), which outputs a spatial feature map of shape $H' \times W' \times 512$ (with stride-32 downsampling, this is approximately $15 \times 20 = 300$ spatial locations). Each spatial location becomes a token in $\mathbb{R}^{512}$, yielding $300$ tokens per camera. **2D sinusoidal position embeddings** are added to encode spatial layout within each camera.
+**Vision backbone.** Four RGB cameras capture the scene at resolution $`480 \times 640`$. Each image is processed independently by a **ResNet-18** backbone (pretrained on ImageNet), which outputs a spatial feature map of shape $`H' \times W' \times 512`$ (with stride-32 downsampling, this is approximately $`15 \times 20 = 300`$ spatial locations). Each spatial location becomes a token in $`\mathbb{R}^{512}`$, yielding $`300`$ tokens per camera. **2D sinusoidal position embeddings** are added to encode spatial layout within each camera.
 
-Total visual tokens: $4 \times 300 = 1200$ tokens in $\mathbb{R}^{512}$.
+Total visual tokens: $`4 \times 300 = 1200`$ tokens in $`\mathbb{R}^{512}`$.
 
-**Joint position encoding.** The 14D joint position vector is projected to $\mathbb{R}^{512}$ via a linear layer, contributing 1 token.
+**Joint position encoding.** The 14D joint position vector is projected to $`\mathbb{R}^{512}`$ via a linear layer, contributing 1 token.
 
-**Style variable encoding.** The 32D style variable $z$ (either sampled from $q_\phi$ during training, or set to $\mathbf{0}$ at test time) is projected to $\mathbb{R}^{512}$ via a linear layer, contributing 1 token.
+**Style variable encoding.** The 32D style variable $`z`$ (either sampled from $`q_\phi`$ during training, or set to $`\mathbf{0}`$ at test time) is projected to $`\mathbb{R}^{512}`$ via a linear layer, contributing 1 token.
 
 **Total decoder input to transformer encoder:**
 
@@ -110,11 +110,11 @@ All 1202 tokens attend to one another, building a rich joint representation of v
 **Transformer decoder.** A standard transformer decoder with:
 - 7 cross-attention layers
 - 8 attention heads
-- $k$ learnable positional queries $Q \in \mathbb{R}^{k \times 512}$, one per output action step
+- $`k`$ learnable positional queries $`Q \in \mathbb{R}^{k \times 512}`$, one per output action step
 
-Each query cross-attends to the encoder's 1202-token output, and the decoder applies self-attention across queries within each layer. The output is $k$ hidden states in $\mathbb{R}^{512}$.
+Each query cross-attends to the encoder's 1202-token output, and the decoder applies self-attention across queries within each layer. The output is $`k`$ hidden states in $`\mathbb{R}^{512}`$.
 
-**Output head.** A two-layer MLP projects each of the $k$ hidden states to $\mathbb{R}^{14}$, producing the predicted chunk:
+**Output head.** A two-layer MLP projects each of the $`k`$ hidden states to $`\mathbb{R}^{14}`$, producing the predicted chunk:
 
 ```math
 \hat{a}_{t:t+k} \in \mathbb{R}^{k \times 14}
@@ -171,29 +171,29 @@ The KL term has a closed form for diagonal Gaussians:
 D_{\text{KL}} = \frac{1}{2} \sum_{j=1}^{32} \left( \mu_j^2 + \sigma_j^2 - \log \sigma_j^2 - 1 \right)
 ```
 
-The weight $\beta = 10$ was found through ablation; it is large enough to encourage the posterior to stay close to the prior (ensuring $z = \mathbf{0}$ at test time is a reasonable action mode) without collapsing the latent space.
+The weight $`\beta = 10`$ was found through ablation; it is large enough to encourage the posterior to stay close to the prior (ensuring $`z = \mathbf{0}`$ at test time is a reasonable action mode) without collapsing the latent space.
 
-> **Note on the training/inference gap.** At training time, $z \sim q_\phi(\cdot \mid a_{t:t+k}, \bar{o}_t)$ — the encoder has access to the future action chunk. At inference time, the encoder is discarded entirely and $z = \mathbf{0}$ (the prior mean). This is intentional: the CVAE framework ensures that $z = \mathbf{0}$ is a valid, high-density point of the prior, so the policy conditioned on $z = \mathbf{0}$ produces a reasonable "average" behavior. The KL term enforces this by penalizing posteriors that deviate far from $\mathcal{N}(0, I)$.
+> **Note on the training/inference gap.** At training time, $`z \sim q_\phi(\cdot \mid a_{t:t+k}, \bar{o}_t)`$ — the encoder has access to the future action chunk. At inference time, the encoder is discarded entirely and $`z = \mathbf{0}`$ (the prior mean). This is intentional: the CVAE framework ensures that $`z = \mathbf{0}`$ is a valid, high-density point of the prior, so the policy conditioned on $`z = \mathbf{0}`$ produces a reasonable "average" behavior. The KL term enforces this by penalizing posteriors that deviate far from $`\mathcal{N}(0, I)`$.
 
 ### 2.4 Temporal Ensembling
 
-Action chunking introduces a tension: if the policy is queried only every $k$ steps, it cannot react to unexpected perturbations within a chunk. Executing a full 100-step open-loop chunk at 50 Hz means 2 seconds of blind execution — far too long for contact-rich manipulation.
+Action chunking introduces a tension: if the policy is queried only every $`k`$ steps, it cannot react to unexpected perturbations within a chunk. Executing a full 100-step open-loop chunk at 50 Hz means 2 seconds of blind execution — far too long for contact-rich manipulation.
 
-ACT resolves this with **temporal ensembling**: the policy is queried at every timestep $t$, but each query produces a chunk $\hat{a}_{t:t+k}$. At time $t$, multiple overlapping predictions are available:
-- Query at step $t$: predictions for $t, t+1, \ldots, t+k-1$
-- Query at step $t-1$: predictions for $t, t+1, \ldots, t+k-2$
+ACT resolves this with **temporal ensembling**: the policy is queried at every timestep $`t`$, but each query produces a chunk $`\hat{a}_{t:t+k}`$. At time $`t`$, multiple overlapping predictions are available:
+- Query at step $`t`$: predictions for $`t, t+1, \ldots, t+k-1`$
+- Query at step $`t-1`$: predictions for $`t, t+1, \ldots, t+k-2`$
 - ...
-- Query at step $t-j$: prediction for $t$ (the $(j+1)$-th element of that chunk)
+- Query at step $`t-j`$: prediction for $`t`$ (the $`(j+1)`$-th element of that chunk)
 
-Denoting $A_t[i]$ as the prediction for time $t$ made by the query at $t - i$, the executed action is the weighted average:
+Denoting $`A_t[i]`$ as the prediction for time $`t`$ made by the query at $`t - i`$, the executed action is the weighted average:
 
 ```math
 a_t = \frac{\sum_{i=0}^{\min(t,k-1)} w_i \, A_t[i]}{\sum_{i=0}^{\min(t,k-1)} w_i}, \qquad w_i = \exp(-m \cdot i)
 ```
 
-where $m$ controls recency weighting. With $m = 0$, all predictions receive equal weight (pure averaging). With $m \to \infty$, only the most recent chunk is used (pure chunking with no ensembling). The default $m = 0.01$ creates a gentle exponential decay that weights recent predictions more but still smooths over the older ones, providing responsiveness while suppressing jerky transitions.
+where $`m`$ controls recency weighting. With $`m = 0`$, all predictions receive equal weight (pure averaging). With $`m \to \infty`$, only the most recent chunk is used (pure chunking with no ensembling). The default $`m = 0.01`$ creates a gentle exponential decay that weights recent predictions more but still smooths over the older ones, providing responsiveness while suppressing jerky transitions.
 
-In practice, a FIFO ring buffer of size $k$ is maintained for each joint dimension, with incoming predictions inserted at the front and the weighted mean computed at each step.
+In practice, a FIFO ring buffer of size $`k`$ is maintained for each joint dimension, with incoming predictions inserted at the front and the weighted mean computed at each step.
 
 ### 2.5 PyTorch Implementation
 
@@ -427,11 +427,11 @@ class TemporalEnsembler:
 
 | Hyperparameter | Value |
 |---|---|
-| Learning rate | $1 \times 10^{-5}$ |
+| Learning rate | $`1 \times 10^{-5}`$ |
 | Optimizer | AdamW |
 | Batch size | 8 |
-| Chunk size $k$ | 100 |
-| KL weight $\beta$ | 10 |
+| Chunk size $`k`$ | 100 |
+| KL weight $`\beta`$ | 10 |
 | Hidden dimension | 512 |
 | FFN dimension | 3200 |
 | Encoder layers | 4 |
@@ -442,7 +442,7 @@ class TemporalEnsembler:
 | Training hardware | 1× NVIDIA RTX 2080 Ti |
 | Training time | ~5 hours |
 | Inference rate | 50 Hz |
-| Temporal ensemble weight $m$ | 0.01 |
+| Temporal ensemble weight $`m`$ | 0.01 |
 
 **Results.** ACT was evaluated on six real-world bimanual manipulation tasks using a dual-arm ALOHA robot: opening a slot car charging station lid, picking and inserting a battery, assembling a phone stand, inserting a 3.5mm audio jack, threading velcro straps, and slotting cups into a mug rack. These tasks require sub-centimeter precision, two-handed coordination, and contact sensing. ACT achieved **80–90% success rates** on all six tasks, substantially outperforming BC and LSTM-based baselines. The ablation study confirmed that both action chunking and temporal ensembling contribute significantly — removing either degrades performance by 20–40 percentage points on contact-critical phases.
 
@@ -456,21 +456,21 @@ class TemporalEnsembler:
 
 Diffusion Policy frames action generation as a denoising diffusion probabilistic model (DDPM). Rather than regressing to a deterministic action, the model learns to reverse a Markov noise process that gradually corrupts clean action sequences into Gaussian noise.
 
-**Forward process.** A clean action $x_0 \in \mathbb{R}^{T_p \times D}$ is corrupted over $K$ diffusion steps by adding Gaussian noise:
+**Forward process.** A clean action $`x_0 \in \mathbb{R}^{T_p \times D}`$ is corrupted over $`K`$ diffusion steps by adding Gaussian noise:
 
 ```math
 q(x_k \mid x_0) = \mathcal{N}\!\left(x_k;\; \sqrt{\bar\alpha_k}\, x_0,\; (1 - \bar\alpha_k) I\right)
 ```
 
-where $\bar\alpha_k = \prod_{i=1}^k \alpha_i$ and $\{\alpha_i\}$ is a cosine noise schedule. As $k \to K$, $x_k \to \mathcal{N}(0, I)$.
+where $`\bar\alpha_k = \prod_{i=1}^k \alpha_i`$ and $`\{\alpha_i\}`$ is a cosine noise schedule. As $`k \to K`$, $`x_k \to \mathcal{N}(0, I)`$.
 
-**Reverse process (inference).** Starting from $x_K \sim \mathcal{N}(0, I)$, the model iteratively denoises:
+**Reverse process (inference).** Starting from $`x_K \sim \mathcal{N}(0, I)`$, the model iteratively denoises:
 
 ```math
 x_{k-1} = \frac{1}{\sqrt{\alpha_k}} \left( x_k - \frac{1 - \alpha_k}{\sqrt{1 - \bar\alpha_k}} \, \epsilon_\theta(x_k, k, o_t) \right) + \sigma_k z, \quad z \sim \mathcal{N}(0, I)
 ```
 
-where $\epsilon_\theta(x_k, k, o_t)$ is the learned noise-prediction network conditioned on the current observation $o_t$.
+where $`\epsilon_\theta(x_k, k, o_t)`$ is the learned noise-prediction network conditioned on the current observation $`o_t`$.
 
 **Training objective.** The model is trained to predict the noise:
 
@@ -482,25 +482,25 @@ This is equivalent to maximizing the ELBO of the data likelihood and admits a si
 
 ### 3.2 CNN-Based vs. Transformer-Based Variants
 
-The noise-prediction network $\epsilon_\theta$ can be implemented in two ways:
+The noise-prediction network $`\epsilon_\theta`$ can be implemented in two ways:
 
-**CNN (U-Net) variant.** A temporal 1D U-Net processes the noisy action sequence along the time axis, with observation features $o_t$ injected via FiLM conditioning at each resolution level. This is efficient and works well when the observation is relatively low-dimensional or encoded separately.
+**CNN (U-Net) variant.** A temporal 1D U-Net processes the noisy action sequence along the time axis, with observation features $`o_t`$ injected via FiLM conditioning at each resolution level. This is efficient and works well when the observation is relatively low-dimensional or encoded separately.
 
 **Transformer variant.** Observation tokens and noisy action tokens are concatenated and processed by a standard transformer encoder (similar to ACT's decoder backbone). The transformer variant generalizes better to complex, high-dimensional observations (multiple cameras) at the cost of higher compute.
 
-**Receding horizon control.** Rather than executing the full predicted sequence, Diffusion Policy uses a receding horizon strategy: predict a sequence of $T_p$ actions but execute only the first $T_a < T_p$ before re-querying. This balances the smoothness of long predictions with reactivity. Typical values: $T_p = 16$, $T_a = 8$.
+**Receding horizon control.** Rather than executing the full predicted sequence, Diffusion Policy uses a receding horizon strategy: predict a sequence of $`T_p`$ actions but execute only the first $`T_a \lt T_p`$ before re-querying. This balances the smoothness of long predictions with reactivity. Typical values: $`T_p = 16`$, $`T_a = 8`$.
 
 ### 3.3 Key Advantages over BC and ACT
 
 **Multimodal distributions without CVAE.** Because the generative process starts from random noise, Diffusion Policy can naturally represent multimodal action distributions — different denoising trajectories from different random seeds converge to different action modes. No explicit latent variable inference is needed at test time.
 
-**Arbitrary action-space dimensionality.** The DDPM objective is dimension-agnostic; adding more action dimensions simply increases the size of $x_0$. No architectural changes are needed.
+**Arbitrary action-space dimensionality.** The DDPM objective is dimension-agnostic; adding more action dimensions simply increases the size of $`x_0`$. No architectural changes are needed.
 
 **Training stability.** The regression-to-noise objective is a simple MSE loss with a well-understood gradient signal. Unlike the CVAE, there is no KL term to balance, no posterior collapse risk, and no training/inference gap.
 
 **Smooth trajectories.** The multi-step denoising process acts as an implicit smoother: high-frequency noise is averaged out across denoising steps, producing actions that are inherently more temporally consistent than single-step regression.
 
-The trade-off is inference latency: a full DDPM reverse pass requires $K$ (typically 100) network evaluations. DDIM and consistency distillation reduce this to 10–20 steps with minimal quality loss, making real-time deployment feasible.
+The trade-off is inference latency: a full DDPM reverse pass requires $`K`$ (typically 100) network evaluations. DDIM and consistency distillation reduce this to 10–20 steps with minimal quality loss, making real-time deployment feasible.
 
 ---
 
@@ -582,21 +582,21 @@ Image features from DINOv2 and SigLIP are concatenated along the channel dimensi
 
 π₀ ("pi-zero") combines a pre-trained VLM backbone with a **flow matching** action head, separating the semantic understanding (VLM) from the continuous action generation (flow matching). This hybrid design avoids the quantization artifacts of discrete action tokenization while retaining language generalization.
 
-**Flow matching action head.** Flow matching is a simulation-free generative modeling framework that learns to transport samples from a simple prior $x_0 \sim \mathcal{N}(0, I)$ to the data distribution $x_1 = \text{action}$ along straight-line paths:
+**Flow matching action head.** Flow matching is a simulation-free generative modeling framework that learns to transport samples from a simple prior $`x_0 \sim \mathcal{N}(0, I)`$ to the data distribution $`x_1 = \text{action}`$ along straight-line paths:
 
 ```math
 \frac{dx}{dt} = v_\theta(x_t, t, o), \quad x_t = t \cdot x_1 + (1-t) \cdot x_0, \quad t \in [0, 1]
 ```
 
-The velocity field $v_\theta$ is trained to predict the direction from noise toward the action:
+The velocity field $`v_\theta`$ is trained to predict the direction from noise toward the action:
 
 ```math
 \mathcal{L} = \mathbb{E}_{t, x_0, x_1} \left[ \left\| v_\theta\!\left( x_1 t + x_0(1-t),\; t,\; o \right) - (x_1 - x_0) \right\|^2 \right]
 ```
 
-At inference, integration of this ODE from $t=0$ to $t=1$ traces a near-straight path from noise to action, requiring far fewer function evaluations (typically 10–20 Euler steps) than DDPM while achieving comparable or better sample quality.
+At inference, integration of this ODE from $`t=0`$ to $`t=1`$ traces a near-straight path from noise to action, requiring far fewer function evaluations (typically 10–20 Euler steps) than DDPM while achieving comparable or better sample quality.
 
-**Architecture.** The VLM backbone (based on PaliGemma) processes language instructions and multi-camera image observations, producing a rich context embedding. The flow matching head conditions its velocity field $v_\theta$ on this context via cross-attention, and predicts continuous robot actions (joint positions or end-effector poses) without discretization.
+**Architecture.** The VLM backbone (based on PaliGemma) processes language instructions and multi-camera image observations, producing a rich context embedding. The flow matching head conditions its velocity field $`v_\theta`$ on this context via cross-attention, and predicts continuous robot actions (joint positions or end-effector poses) without discretization.
 
 **Why this hybrid works.** The VLM backbone provides:
 - Semantic understanding of instructions involving novel objects, spatial relationships, and abstract concepts.
