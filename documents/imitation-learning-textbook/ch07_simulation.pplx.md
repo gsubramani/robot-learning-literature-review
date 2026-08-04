@@ -194,7 +194,7 @@ MetaWorld provides 50 robot manipulation tasks with a shared workspace, robot, a
 **Structure:**
 - **MT10:** 10 tasks for multi-task training
 - **MT50:** All 50 tasks simultaneously
-- **ML1/ML10/ML45:** Meta-learning splits (train on \(n\) tasks, generalize to held-out tasks)
+- **ML1/ML10/ML45:** Meta-learning splits (train on $n$ tasks, generalize to held-out tasks)
 
 MetaWorld was originally designed for RL; it is now widely used for IL comparison because the same environment supports both paradigms. Success metrics are per-task binary success rates averaged over 50 episodes.
 

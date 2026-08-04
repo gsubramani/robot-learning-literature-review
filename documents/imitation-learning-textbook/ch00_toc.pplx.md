@@ -128,19 +128,19 @@ The diagram below maps the citation relationships between the core ACT paper, th
 
 | Symbol | Meaning |
 |--------|---------|
-| \(s_t\) | State at timestep \(t\) |
-| \(o_t\) | Observation at timestep \(t\) (may differ from state under partial observability) |
-| \(a_t\) | Action at timestep \(t\) |
-| \(\pi\) | Policy \(\pi: \mathcal{S} \rightarrow \mathcal{A}\) |
-| \(\pi^*\) | Expert / oracle policy |
-| \(\mathcal{D}\) | Demonstration dataset |
-| \(k\) | Action chunk size (default 100 in ACT) |
-| \(z\) | Latent style variable in CVAE (32D in ACT) |
-| \(\beta\) | KL regularization weight in CVAE (10 in ACT) |
-| \(\bar{\alpha}_t\) | DDPM cumulative noise schedule |
-| \(v_\theta\) | Flow matching velocity field |
-| \(T\) | Episode length (horizon) |
-| \(\epsilon\) | Per-step policy error |
+| $s_t$ | State at timestep $t$ |
+| $o_t$ | Observation at timestep $t$ (may differ from state under partial observability) |
+| $a_t$ | Action at timestep $t$ |
+| $\pi$ | Policy $\pi: \mathcal{S} \rightarrow \mathcal{A}$ |
+| $\pi^*$ | Expert / oracle policy |
+| $\mathcal{D}$ | Demonstration dataset |
+| $k$ | Action chunk size (default 100 in ACT) |
+| $z$ | Latent style variable in CVAE (32D in ACT) |
+| $\beta$ | KL regularization weight in CVAE (10 in ACT) |
+| $\bar{\alpha}_t$ | DDPM cumulative noise schedule |
+| $v_\theta$ | Flow matching velocity field |
+| $T$ | Episode length (horizon) |
+| $\epsilon$ | Per-step policy error |
 
 ---
 

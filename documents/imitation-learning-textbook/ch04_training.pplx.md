@@ -86,7 +86,7 @@ In practice:
 
 **Absolute actions** represent the target state directly (e.g., target joint angles). They are easier to supervise but sensitive to initialization: if the robot starts in a slightly different configuration, absolute actions may not transfer.
 
-**Delta actions** represent changes relative to the current state (e.g., \( \Delta q_t = q_{t+1} - q_t \)). They generalize better to starting-pose variation and are more natural for velocity-controlled robots, but compound integration errors over long horizons.
+**Delta actions** represent changes relative to the current state (e.g., $\Delta q_t = q_{t+1} - q_t$). They generalize better to starting-pose variation and are more natural for velocity-controlled robots, but compound integration errors over long horizons.
 
 A common compromise: use delta actions for Cartesian end-effector control (small, bounded deltas) and absolute actions for joint-space control where the target configuration is well-defined.
 
@@ -96,15 +96,15 @@ Normalization is critical. Without it, high-variance action dimensions (e.g., a 
 
 **Per-dimension normalization** to zero mean and unit variance (computed on the training set) is the standard approach:
 
-\[
+$$
 \hat{a}_i = \frac{a_i - \mu_i}{\sigma_i + \epsilon}
-\]
+$$
 
-For joint positions, normalizing to \([-1, 1]\) using dataset min/max is common in ACT:
+For joint positions, normalizing to $[-1, 1]$ using dataset min/max is common in ACT:
 
-\[
+$$
 \hat{q}_i = 2 \cdot \frac{q_i - q_i^{\min}}{q_i^{\max} - q_i^{\min}} - 1
-\]
+$$
 
 Store the normalization statistics alongside model weights so they can be applied consistently at inference time.
 
@@ -116,7 +116,7 @@ Action Chunking with Transformers (ACT) ([Zhao et al., 2023](https://arxiv.org/a
 
 ### 4.3.1 Full Training Loop with CVAE
 
-During training, the CVAE encoder sees the ground-truth actions and produces a distribution over a latent style vector \(z\). The decoder (the policy network) receives the observation *and* a sample from this distribution, and must reconstruct the action chunk.
+During training, the CVAE encoder sees the ground-truth actions and produces a distribution over a latent style vector $z$. The decoder (the policy network) receives the observation *and* a sample from this distribution, and must reconstruct the action chunk.
 
 ```python
 optimizer = torch.optim.AdamW(
@@ -155,25 +155,25 @@ for batch in dataloader:
     optimizer.step()
 ```
 
-**Why the KL term?** The KL loss regularizes \(z\) toward a standard Gaussian prior \(\mathcal{N}(0, I)\). At inference time, the encoder is not available (no ground-truth actions to condition on), so \(z\) is set to the prior mean \(\mathbf{0}\). The KL term ensures the encoder's posterior does not deviate too far from this prior, keeping the distribution well-matched.
+**Why the KL term?** The KL loss regularizes $z$ toward a standard Gaussian prior $\mathcal{N}(0, I)$. At inference time, the encoder is not available (no ground-truth actions to condition on), so $z$ is set to the prior mean $\mathbf{0}$. The KL term ensures the encoder's posterior does not deviate too far from this prior, keeping the distribution well-matched.
 
-**Why \(\beta = 10\)?** The \(\beta\)-VAE formulation ([Higgins et al., 2017](https://openreview.net/forum?id=Sy2fzU9gl)) up-weights the KL term to encourage a more disentangled and regular latent space. In ACT, \(\beta = 10\) was found empirically to balance reconstruction quality against posterior collapse.
+**Why $\beta = 10$?** The $\beta$-VAE formulation ([Higgins et al., 2017](https://openreview.net/forum?id=Sy2fzU9gl)) up-weights the KL term to encourage a more disentangled and regular latent space. In ACT, $\beta = 10$ was found empirically to balance reconstruction quality against posterior collapse.
 
 The KL loss for a diagonal Gaussian posterior has the closed-form:
 
-\[
+$$
 \mathcal{L}_{\text{KL}} = -\frac{1}{2} \sum_{j=1}^{d_z} \left(1 + \log \sigma_j^2 - \mu_j^2 - \sigma_j^2\right)
-\]
+$$
 
 The total ACT loss is:
 
-\[
+$$
 \mathcal{L}_{\text{ACT}} = \mathcal{L}_{\text{recon}} + \beta \cdot \mathcal{L}_{\text{KL}}
-\]
+$$
 
 ### 4.3.2 Inference with Temporal Ensembling
 
-At test time, the policy predicts a chunk of \(k\) future actions at every timestep, but only needs to execute one action. Naïvely executing only the first predicted action discards useful signal from the rest of the chunk. ACT uses *temporal ensembling*: overlapping predictions from multiple recent inference calls are combined with exponential weighting, giving more influence to fresher predictions.
+At test time, the policy predicts a chunk of $k$ future actions at every timestep, but only needs to execute one action. Naïvely executing only the first predicted action discards useful signal from the rest of the chunk. ACT uses *temporal ensembling*: overlapping predictions from multiple recent inference calls are combined with exponential weighting, giving more influence to fresher predictions.
 
 ```python
 from collections import defaultdict
@@ -205,11 +205,11 @@ for t in range(episode_len):
     del action_buffer[t]  # free memory
 ```
 
-The weight assigned to prediction \(i\) steps in the future is:
+The weight assigned to prediction $i$ steps in the future is:
 
-\[
+$$
 w_i = e^{-m \cdot i}
-\]
+$$
 
 This gives full weight to a prediction made for the *current* step and exponentially less weight to predictions that were made far in advance. Temporal ensembling smooths out jitter in individual predictions and has been shown to improve task success rates by several percentage points ([Zhao et al., 2023](https://arxiv.org/abs/2304.13705)).
 
@@ -217,30 +217,30 @@ This gives full weight to a prediction made for the *current* step and exponenti
 
 | Hyperparameter | Value | Notes |
 |---|---|---|
-| Learning rate | \(1 \times 10^{-5}\) | AdamW; lower than typical due to pretrained backbone |
+| Learning rate | $1 \times 10^{-5}$ | AdamW; lower than typical due to pretrained backbone |
 | Batch size | 8 | Limited by GPU memory for multi-camera setups |
-| Chunk size \(k\) | 100 | Covers ~2 seconds at 50 Hz |
-| Latent dim \(d_z\) | 32 | Style vector size |
-| \(\beta\) (KL weight) | 10 | Increase if posterior collapse observed |
+| Chunk size $k$ | 100 | Covers ~2 seconds at 50 Hz |
+| Latent dim $d_z$ | 32 | Style vector size |
+| $\beta$ (KL weight) | 10 | Increase if posterior collapse observed |
 | Training steps | ~20,000 | Converges in ~5 hours on a single RTX 2080 Ti |
 | Image augmentation | None (default) | Small datasets risk overfitting with augmentation |
-| Joint normalization | \([-1, 1]\) | Per-joint min/max from training set |
+| Joint normalization | $[-1, 1]$ | Per-joint min/max from training set |
 
 ---
 
 ## 4.4 Diffusion Policy Training
 
-Diffusion Policy ([Chi et al., 2023](https://arxiv.org/abs/2303.04137)) frames action generation as a denoising process. Rather than predicting actions directly, the network learns to denoise a Gaussian noise vector into a clean action sequence over \(T\) diffusion steps. This naturally handles multimodal action distributions without requiring a VAE.
+Diffusion Policy ([Chi et al., 2023](https://arxiv.org/abs/2303.04137)) frames action generation as a denoising process. Rather than predicting actions directly, the network learns to denoise a Gaussian noise vector into a clean action sequence over $T$ diffusion steps. This naturally handles multimodal action distributions without requiring a VAE.
 
 ### 4.4.1 DDPM Training
 
-The Denoising Diffusion Probabilistic Model (DDPM) forward process gradually adds noise to the clean action \(a_0\):
+The Denoising Diffusion Probabilistic Model (DDPM) forward process gradually adds noise to the clean action $a_0$:
 
-\[
+$$
 q(a_t | a_0) = \mathcal{N}\!\left(a_t;\, \sqrt{\bar{\alpha}_t}\, a_0,\, (1 - \bar{\alpha}_t) I\right)
-\]
+$$
 
-where \(\bar{\alpha}_t = \prod_{s=1}^{t} (1 - \beta_s)\) and \(\{\beta_s\}\) is a noise schedule. The network is trained to predict the noise \(\epsilon\) that was added:
+where $\bar{\alpha}_t = \prod_{s=1}^{t} (1 - \beta_s)$ and $\{\beta_s\}$ is a noise schedule. The network is trained to predict the noise $\epsilon$ that was added:
 
 ```python
 from diffusers import DDPMScheduler
@@ -325,11 +325,11 @@ Like ACT, Diffusion Policy uses action chunking with a receding horizon to balan
 
 | Parameter | Typical Value | Meaning |
 |---|---|---|
-| \(T_p\) (prediction horizon) | 16 steps | Length of generated action chunk |
-| \(T_a\) (action horizon) | 8 steps | Number of actions actually executed |
-| \(T_o\) (observation horizon) | 2 steps | Observation context length |
+| $T_p$ (prediction horizon) | 16 steps | Length of generated action chunk |
+| $T_a$ (action horizon) | 8 steps | Number of actions actually executed |
+| $T_o$ (observation horizon) | 2 steps | Observation context length |
 
-Predicting \(T_p = 16\) but only executing \(T_a = 8\) ensures the policy can anticipate further into the future while remaining reactive to new observations every 8 steps. This is a key design choice: larger \(T_a/T_p\) ratios increase reactivity but reduce the benefit of planning ahead.
+Predicting $T_p = 16$ but only executing $T_a = 8$ ensures the policy can anticipate further into the future while remaining reactive to new observations every 8 steps. This is a key design choice: larger $T_a/T_p$ ratios increase reactivity but reduce the benefit of planning ahead.
 
 ---
 
@@ -379,13 +379,13 @@ for batch in dataloader:
     optimizer.step()
 ```
 
-LoRA works by replacing the weight update \(\Delta W \in \mathbb{R}^{d \times d}\) with a low-rank factorization:
+LoRA works by replacing the weight update $\Delta W \in \mathbb{R}^{d \times d}$ with a low-rank factorization:
 
-\[
+$$
 \Delta W = \frac{\alpha}{r} \cdot BA, \quad B \in \mathbb{R}^{d \times r},\; A \in \mathbb{R}^{r \times d}, \quad r \ll d
-\]
+$$
 
-At initialization, \(A\) is drawn from a Gaussian and \(B = 0\), so \(\Delta W = 0\) and the model starts from the pretrained weights.
+At initialization, $A$ is drawn from a Gaussian and $B = 0$, so $\Delta W = 0$ and the model starts from the pretrained weights.
 
 ### 4.5.2 Full Fine-Tuning vs LoRA vs Frozen Backbone
 
@@ -398,7 +398,7 @@ At initialization, \(A\) is drawn from a Gaussian and \(B = 0\), so \(\Delta W =
 **Practical guidance:**
 - Start with LoRA. If performance plateaus and you have enough data, consider full fine-tuning.
 - Frozen backbone fine-tuning is rarely optimal; even the lightest LoRA typically outperforms it.
-- When using full fine-tuning, apply a *differential learning rate*: smaller LR for the backbone (e.g., \(2 \times 10^{-5}\)) and larger LR for the action head (e.g., \(1 \times 10^{-4}\)).
+- When using full fine-tuning, apply a *differential learning rate*: smaller LR for the backbone (e.g., $2 \times 10^{-5}$) and larger LR for the action head (e.g., $1 \times 10^{-4}$).
 
 ### 4.5.3 Action Tokenization for VLAs
 
@@ -429,11 +429,11 @@ def detokenize_action(
     return normalized * (hi - lo) + lo                     # [lo, hi]
 ```
 
-With 256 bins over a \([-1, 1]\) range, the quantization error per dimension is at most:
+With 256 bins over a $[-1, 1]$ range, the quantization error per dimension is at most:
 
-\[
+$$
 \epsilon_{\text{quant}} = \frac{2}{2 \times 256} = \frac{1}{256} \approx 0.004
-\]
+$$
 
 This is typically within acceptable tolerance for robot control. OpenVLA uses 256 bins per action dimension, appending action tokens to the end of the language output sequence so that the standard cross-entropy training objective applies uniformly.
 
@@ -469,7 +469,7 @@ total = sum(raw_weights.values())
 sampling_probs = {k: v / total for k, v in raw_weights.items()}
 ```
 
-Temperature \(\tau < 1\) compresses the distribution, giving more weight to smaller datasets (including robot data) than their raw size would suggest.
+Temperature $\tau < 1$ compresses the distribution, giving more weight to smaller datasets (including robot data) than their raw size would suggest.
 
 ### 4.6.3 π₀.5 Co-Training
 
@@ -559,14 +559,14 @@ Use gradient checkpointing when training VLAs at full fine-tune scale, especiall
 
 ### 4.8.1 Posterior Collapse in CVAE
 
-**Symptom:** The KL loss quickly drops to near zero early in training. The encoder stops using the latent variable \(z\), and the model effectively ignores the style information. The decoder learns to predict actions without using \(z\).
+**Symptom:** The KL loss quickly drops to near zero early in training. The encoder stops using the latent variable $z$, and the model effectively ignores the style information. The decoder learns to predict actions without using $z$.
 
-**Diagnosis:** Monitor \(\mathcal{L}_{\text{KL}}\) separately from \(\mathcal{L}_{\text{recon}}\). If KL < 0.1 nats within the first 1000 steps, collapse is likely occurring.
+**Diagnosis:** Monitor $\mathcal{L}_{\text{KL}}$ separately from $\mathcal{L}_{\text{recon}}$. If KL < 0.1 nats within the first 1000 steps, collapse is likely occurring.
 
 **Solutions:**
-1. **Increase \(\beta\):** A higher KL weight forces the encoder to maintain a non-trivial posterior. Try \(\beta \in \{10, 20, 50\}\).
-2. **KL annealing:** Start with \(\beta = 0\) (pure reconstruction) and linearly increase to the target \(\beta\) over the first 5000 steps. This gives the encoder time to learn useful representations before KL pressure is applied.
-3. **Reduce decoder capacity:** A decoder that is too powerful can ignore \(z\) entirely. Consider adding dropout or reducing the number of decoder layers.
+1. **Increase $\beta$:** A higher KL weight forces the encoder to maintain a non-trivial posterior. Try $\beta \in \{10, 20, 50\}$.
+2. **KL annealing:** Start with $\beta = 0$ (pure reconstruction) and linearly increase to the target $\beta$ over the first 5000 steps. This gives the encoder time to learn useful representations before KL pressure is applied.
+3. **Reduce decoder capacity:** A decoder that is too powerful can ignore $z$ entirely. Consider adding dropout or reducing the number of decoder layers.
 
 ### 4.8.2 Mode Averaging in Plain BC
 
@@ -593,7 +593,7 @@ Use gradient checkpointing when training VLAs at full fine-tune scale, especiall
 **Symptom:** Loss oscillates or diverges when predicting 7+ DOF joint actions, especially for bimanual robots (14 DOF).
 
 **Solutions:**
-- **Normalize all action dimensions** to \([-1, 1]\) or zero mean / unit variance. Unnormalized actions with large dynamic ranges destabilize gradients.
+- **Normalize all action dimensions** to $[-1, 1]$ or zero mean / unit variance. Unnormalized actions with large dynamic ranges destabilize gradients.
 - **Use L1 loss instead of MSE:** L1 provides more uniform gradient magnitude across scales, while MSE's quadratic scaling amplifies large errors disproportionately.
 - **Gradient clipping:** `torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)` prevents explosive gradients.
 - **Reduce learning rate** and use a warm-up schedule (linear or cosine).
@@ -663,13 +663,13 @@ For simulation-based evaluation (where rollouts are cheap), evaluate every 500�
 | Contact quality | Force/torque during contact events | Proxy for skill smoothness |
 | Policy FPS | Inference frequency | Must exceed control frequency |
 
-**Confidence intervals:** With 50 rollouts, the 95% confidence interval for a success rate \(\hat{p}\) is approximately:
+**Confidence intervals:** With 50 rollouts, the 95% confidence interval for a success rate $\hat{p}$ is approximately:
 
-\[
+$$
 \hat{p} \pm 1.96 \sqrt{\frac{\hat{p}(1-\hat{p})}{N}}
-\]
+$$
 
-For \(\hat{p} = 0.7, N = 50\), this gives \(\pm 0.127\) — a wide interval. Report confidence intervals alongside success rates to avoid over-interpreting small differences.
+For $\hat{p} = 0.7, N = 50$, this gives $\pm 0.127$ — a wide interval. Report confidence intervals alongside success rates to avoid over-interpreting small differences.
 
 ### 4.9.4 Detecting Overfitting vs Underfitting
 
@@ -688,8 +688,8 @@ This chapter covered the full training lifecycle for imitation learning policies
 
 - **Paradigm selection** (from-scratch, pre-train+fine-tune, co-training) determines data efficiency, compute requirements, and generalization. For most practitioners, pre-train+fine-tune with LoRA is the best starting point.
 - **BC training loops** are simple but sensitive to loss function choice (L1 vs MSE), action representation (absolute vs delta), and normalization.
-- **ACT** adds a CVAE to handle multi-modal demonstrations, with temporal ensembling at inference to smooth execution. Key settings: \(\beta = 10\), chunk size 100, \(z = \mathbf{0}\) at test time.
-- **Diffusion Policy** handles multi-modality through the denoising process itself. Use DDIM (10 steps) for real-time inference and receding-horizon execution (\(T_p = 16, T_a = 8\)).
+- **ACT** adds a CVAE to handle multi-modal demonstrations, with temporal ensembling at inference to smooth execution. Key settings: $\beta = 10$, chunk size 100, $z = \mathbf{0}$ at test time.
+- **Diffusion Policy** handles multi-modality through the denoising process itself. Use DDIM (10 steps) for real-time inference and receding-horizon execution ($T_p = 16, T_a = 8$).
 - **VLA fine-tuning** with LoRA updates ~1.5% of parameters while preserving pretrained representations; action tokenization maps continuous values to discrete bins.
 - **Co-training** maintains web knowledge by mixing robot and non-robot data throughout training; task-proportional sampling with temperature controls the effective mixing ratio.
 - **Infrastructure choices** — BF16 mixed precision, FSDP, gradient checkpointing — are critical for training large VLAs efficiently.

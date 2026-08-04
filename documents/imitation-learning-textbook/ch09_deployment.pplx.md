@@ -41,12 +41,12 @@ The right arm choice depends on your budget, required payload, and community sup
 
 | Robot | Cost (USD) | DoF | Payload | IL community support | Notes |
 |---|---|---|---|---|---|
-| WidowX 250 | ~$3,000 | 6 | 250 g | High (BridgeV2) | Low-cost research standard |
-| ViperX 300 | ~$5,500 | 6 | 750 g | High (BridgeV2) | More payload than WidowX |
-| Franka Panda | ~$25,000 | 7 | 3 kg | Very high (research standard) | Torque control, force sensing built-in |
-| Universal Robots UR5 | ~$35,000 | 6 | 5 kg | Moderate | Industrial reliability, no direct torque control |
-| UFACTORY xArm 6 | ~$8,000 | 6 | 5 kg | Growing | Good value; xArm SDK well documented |
-| ALOHA (custom) | ~$20,000 | 14 (bimanual) | 2×500 g | High (ACT papers) | Low-Dynamixel-based bimanual system |
+| WidowX 250 | ~\$3,000 | 6 | 250 g | High (BridgeV2) | Low-cost research standard |
+| ViperX 300 | ~\$5,500 | 6 | 750 g | High (BridgeV2) | More payload than WidowX |
+| Franka Panda | ~\$25,000 | 7 | 3 kg | Very high (research standard) | Torque control, force sensing built-in |
+| Universal Robots UR5 | ~\$35,000 | 6 | 5 kg | Moderate | Industrial reliability, no direct torque control |
+| UFACTORY xArm 6 | ~\$8,000 | 6 | 5 kg | Growing | Good value; xArm SDK well documented |
+| ALOHA (custom) | ~\$20,000 | 14 (bimanual) | 2×500 g | High (ACT papers) | Low-Dynamixel-based bimanual system |
 
 **Key recommendation:** For new projects, Franka Panda is the research standard if budget allows. For low-cost work, WidowX + BridgeV2 data gives access to a large pretrained-model ecosystem.
 
@@ -327,7 +327,7 @@ Understanding failure modes *before* deployment lets you design mitigations in a
 **Diagnosis:** Monitor the per-stage success rate. If stage 1 = 90%, stage 2 = 50%, stage 3 = 20%, compounding error is the pattern.
 
 **Mitigations:**
-- **Action chunking:** Increase chunk size \(k\) to reduce decision frequency.
+- **Action chunking:** Increase chunk size $k$ to reduce decision frequency.
 - **Temporal ensembling:** Smooth actions across overlapping chunks.
 - **Hierarchical IL:** Train a separate high-level policy for stage transitions and per-stage low-level policies. Each low-level policy operates over a shorter horizon.
 - **Reset policy:** Train a recovery policy that can re-establish a canonical state (e.g., put the object back in the tray) when a stage fails.
@@ -416,7 +416,7 @@ class OnlineDAggerCollector:
 
 For tasks where success/failure can be verified automatically (e.g., a sensor detects whether the peg was inserted), the policy can collect its own successful trajectories:
 
-1. Run the policy autonomously for \(N\) episodes
+1. Run the policy autonomously for $N$ episodes
 2. Detect success via sensor or visual check
 3. Add successful trajectories to the training dataset
 4. Retrain on the augmented dataset
@@ -476,7 +476,7 @@ Use this checklist before any deployment to a new environment, after any hardwar
    - Verify joint position limits are enforced in software (not just hardware stops)
    - Verify joint velocity limits are enforced (maximum joint speed in rad/s per joint)
    - Verify workspace bounds: robot cannot reach humans or fragile objects in the workspace
-   - Verify force limits: emergency stop triggers if wrist force exceeds \(F_{\max}\) (e.g., 30 N)
+   - Verify force limits: emergency stop triggers if wrist force exceeds $F_{\max}$ (e.g., 30 N)
    - Test emergency stop button manually
 
 2. **Camera calibration**
