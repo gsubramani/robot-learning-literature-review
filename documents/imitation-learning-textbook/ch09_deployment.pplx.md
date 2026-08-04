@@ -327,7 +327,7 @@ Understanding failure modes *before* deployment lets you design mitigations in a
 **Diagnosis:** Monitor the per-stage success rate. If stage 1 = 90%, stage 2 = 50%, stage 3 = 20%, compounding error is the pattern.
 
 **Mitigations:**
-- **Action chunking:** Increase chunk size $k$ to reduce decision frequency.
+- **Action chunking:** Increase chunk size $`k`$ to reduce decision frequency.
 - **Temporal ensembling:** Smooth actions across overlapping chunks.
 - **Hierarchical IL:** Train a separate high-level policy for stage transitions and per-stage low-level policies. Each low-level policy operates over a shorter horizon.
 - **Reset policy:** Train a recovery policy that can re-establish a canonical state (e.g., put the object back in the tray) when a stage fails.
@@ -416,7 +416,7 @@ class OnlineDAggerCollector:
 
 For tasks where success/failure can be verified automatically (e.g., a sensor detects whether the peg was inserted), the policy can collect its own successful trajectories:
 
-1. Run the policy autonomously for $N$ episodes
+1. Run the policy autonomously for $`N`$ episodes
 2. Detect success via sensor or visual check
 3. Add successful trajectories to the training dataset
 4. Retrain on the augmented dataset
@@ -476,7 +476,7 @@ Use this checklist before any deployment to a new environment, after any hardwar
    - Verify joint position limits are enforced in software (not just hardware stops)
    - Verify joint velocity limits are enforced (maximum joint speed in rad/s per joint)
    - Verify workspace bounds: robot cannot reach humans or fragile objects in the workspace
-   - Verify force limits: emergency stop triggers if wrist force exceeds $F_{\max}$ (e.g., 30 N)
+   - Verify force limits: emergency stop triggers if wrist force exceeds $`F_{\max}`$ (e.g., 30 N)
    - Test emergency stop button manually
 
 2. **Camera calibration**
