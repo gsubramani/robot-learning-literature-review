@@ -10,9 +10,9 @@ Imitation learning (IL) is the family of methods that trains a policy by observi
 
 **Formal definition.** Given a dataset of expert demonstrations
 
-$$
+```math
 \mathcal{D} = \{(s_t, a_t)\}_{t=1}^{N}
-$$
+```
 
 where $s_t \in \mathcal{S}$ is the state at time $t$ and $a_t \in \mathcal{A}$ is the expert's action, the goal of imitation learning is to learn a policy $\pi_\theta : \mathcal{S} \rightarrow \mathcal{A}$ (or a distribution over actions) that behaves like the expert.
 
@@ -42,13 +42,13 @@ Let $\mathcal{S}$ be the state space—everything needed to describe the world a
 
 A **policy** maps states to actions:
 
-$$
+```math
 \pi : \mathcal{S} \rightarrow \mathcal{A} \quad \text{(deterministic)}
-$$
+```
 
-$$
+```math
 \pi : \mathcal{S} \rightarrow \Delta(\mathcal{A}) \quad \text{(stochastic; outputs a distribution over actions)}
-$$
+```
 
 Stochastic policies are critical in IL because expert demonstrations are often *multimodal*: two equally valid ways to pick up an object exist, and a deterministic policy forced to average them will do neither. The diffusion policy and CVAE-based methods (Chapter 3) address this directly.
 
@@ -56,9 +56,9 @@ Stochastic policies are critical in IL because expert demonstrations are often *
 
 A **trajectory** (or rollout) is a sequence of states and actions:
 
-$$
+```math
 \tau = (s_0, a_0, s_1, a_1, \ldots, s_T, a_T)
-$$
+```
 
 The initial state $s_0 \sim \mu_0$ is drawn from an initial state distribution. Subsequent states follow the (unknown) transition dynamics $s_{t+1} \sim T(\cdot \mid s_t, a_t)$.
 
@@ -66,9 +66,9 @@ The initial state $s_0 \sim \mu_0$ is drawn from an initial state distribution. 
 
 In behavior cloning, we minimize the average loss on the expert's state distribution:
 
-$$
+```math
 \min_\theta \; \mathbb{E}_{s \sim d_{\pi^*}} \left[ \ell\!\left(\pi_\theta(s),\, \pi^*(s)\right) \right]
-$$
+```
 
 where $d_{\pi^*}$ is the **state visitation distribution** of the expert policy (the marginal distribution over states when the expert acts). For continuous actions, $\ell$ is typically mean-squared error; for discrete tokens it is cross-entropy.
 
@@ -126,17 +126,17 @@ An MDP is a tuple $(\mathcal{S}, \mathcal{A}, T, R, \gamma)$:
 
 A **Partially Observable MDP** (POMDP) extends the MDP with an observation function:
 
-$$
+```math
 O : \mathcal{S} \rightarrow \Delta(\mathcal{Z})
-$$
+```
 
 where $\mathcal{Z}$ is the observation space (e.g., RGB images). The agent receives observation $o_t \sim O(\cdot \mid s_t)$ rather than the true state $s_t$.
 
 Because $o_t \neq s_t$, a Markov policy $\pi(o_t)$ is suboptimal—the agent needs *history* to resolve ambiguity. In practice:
 
-$$
+```math
 h_t = (o_1, o_2, \ldots, o_t)
-$$
+```
 
 is used as input. Transformers handle this naturally via attention over the observation sequence. Recurrent networks (LSTM, GRU) are an alternative but have largely been supplanted.
 
@@ -178,9 +178,9 @@ The policy outputs the desired end-effector pose $(x, y, z, \text{quat}) \in \ma
 
 Rather than predicting absolute state, the policy predicts the *change*:
 
-$$
+```math
 \Delta \mathbf{q}_t = \pi_\theta(h_t), \quad \mathbf{q}_{t+1} = \mathbf{q}_t + \Delta \mathbf{q}_t
-$$
+```
 
 **Pros:** Locally translation-invariant; easier to generalize across start configurations.
 
@@ -269,15 +269,15 @@ This is the central challenge of behavior cloning. Understanding it quantitative
 
 Behavior cloning minimizes:
 
-$$
+```math
 \mathcal{L}_{\text{BC}} = \mathbb{E}_{(s, a) \sim d_{\pi^*}} \left[ \ell(\pi_\theta(s), a) \right]
-$$
+```
 
 Suppose the trained policy achieves expected per-step loss $\epsilon$ on the expert's state distribution $d_{\pi^*}$:
 
-$$
+```math
 \mathbb{E}_{s \sim d_{\pi^*}} [\ell(\pi_\theta(s), \pi^*(s))] \leq \epsilon
-$$
+```
 
 At deployment, the policy generates its *own* state distribution $d_{\pi_\theta}$. Even if $\pi_\theta$ is nearly perfect on $d_{\pi^*}$, on $d_{\pi_\theta}$ it makes mistakes that push the system further from the expert's states—and those novel states make subsequent errors more likely.
 
@@ -285,9 +285,9 @@ At deployment, the policy generates its *own* state distribution $d_{\pi_\theta}
 
 **Theorem** ([Ross & Bagnell, 2010](https://arxiv.org/abs/1011.0686)): For a task of horizon $T$ and per-step imitation loss $\epsilon$ (measured on the expert distribution), the expected total loss under the learned policy satisfies:
 
-$$
+```math
 \mathbb{E}_{\pi_\theta}\!\left[\sum_{t=0}^{T} \ell_t\right] \;\leq\; T\epsilon + O(T^2 \epsilon)
-$$
+```
 
 **Interpretation:** The linear term $T\epsilon$ is what you would get if you could guarantee the policy stays near expert states. The quadratic term $O(T^2\epsilon)$ is the compounding cost: errors at early timesteps push the policy into unfamiliar territory, which causes more errors, which push even further. For $T = 500$ (a typical manipulation episode) and $\epsilon = 0.01$, the quadratic term dominates: $T^2\epsilon = 2500$.
 
@@ -295,9 +295,9 @@ $$
 
 **DAgger** (Dataset Aggregation, [Ross et al., 2011](https://arxiv.org/abs/1011.0686)) addresses this by training on states generated by the *learned* policy, not just the expert. After $N$ iterations:
 
-$$
+```math
 \mathbb{E}_{\pi_\theta}\!\left[\sum_{t=0}^{T} \ell_t\right] \;\leq\; T\epsilon_{\text{opt}} + O\!\left(T\sqrt{\epsilon_{\text{opt}}}\right)
-$$
+```
 
 where $\epsilon_{\text{opt}}$ is the best achievable loss. The quadratic term is reduced to a square-root term—a massive improvement for large $T$.
 
@@ -307,15 +307,15 @@ where $\epsilon_{\text{opt}}$ is the best achievable loss. The quadratic term is
 
 **Action chunking** predicts a sequence of $k$ actions at once rather than one action per step:
 
-$$
+```math
 (a_t, a_{t+1}, \ldots, a_{t+k-1}) = \pi_\theta(h_t)
-$$
+```
 
 The policy queries the model every $k$ steps instead of every step, reducing the number of autoregressive decisions from $T$ to $T/k$. Substituting $T \leftarrow T/k$ in the BC bound:
 
-$$
+```math
 \mathbb{E}\!\left[\sum_t \ell_t\right] \;\leq\; \frac{T}{k}\epsilon + O\!\left(\frac{T^2}{k^2}\epsilon\right)
-$$
+```
 
 For $k = 100$ and $T = 500$, the quadratic term shrinks by a factor of $10{,}000$. This is the core justification for ACT's action chunking design ([Zhao et al., 2023](https://arxiv.org/abs/2304.13705)).
 

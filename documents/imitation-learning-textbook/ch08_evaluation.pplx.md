@@ -12,9 +12,9 @@ The first step in evaluation is deciding what "good" means for your task. There 
 
 The most common metric in manipulation IL:
 
-$$
+```math
 \text{SR} = \frac{1}{N} \sum_{i=1}^{N} \mathbf{1}[\text{episode } i \text{ succeeded}]
-$$
+```
 
 Success is binary per episode: either the robot completed the task or it did not. This requires a **task-specific success criterion** that must be defined before running any experiment (to avoid post-hoc cherry-picking).
 
@@ -29,9 +29,9 @@ Success is binary per episode: either the robot completed the task or it did not
 
 For long-horizon tasks with natural subtask boundaries, a binary success metric discards useful information. Instead, score each stage:
 
-$$
+```math
 \text{TCR} = \frac{1}{N \cdot K} \sum_{i=1}^{N} \sum_{k=1}^{K} \mathbf{1}[\text{stage } k \text{ completed in episode } i]
-$$
+```
 
 where $K$ is the number of stages. This metric rewards partial progress and is especially useful when comparing two policies where neither achieves >50% binary success.
 
@@ -204,9 +204,9 @@ This result demonstrates that scale is not the primary driver of IL performanceâ
 
 With $N = 20$ rollouts, the standard error of a binomial proportion is:
 
-$$
+```math
 \text{SE} = \sqrt{\frac{p(1-p)}{N}} \approx \sqrt{\frac{0.5 \times 0.5}{20}} \approx 11\%
-$$
+```
 
 A 5-percentage-point difference is noise, not signal.
 
@@ -253,9 +253,9 @@ Requires a wrist-mounted force-torque sensor or joint torque estimation.
 
 For real deployments, speed matters.
 
-$$
+```math
 \bar{t}_{\text{success}} = \frac{1}{N_{\text{success}}} \sum_{i : \text{success}} t_i
-$$
+```
 
 Report mean and standard deviation over successful episodes. A policy that succeeds in 12 seconds is preferable to one that succeeds in 45 seconds, all else equal.
 
